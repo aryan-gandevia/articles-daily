@@ -105,8 +105,11 @@ BEGIN
   SET favourited_count = GREATEST(favourited_count - 1, 0)
   WHERE url = article_url_param;
 
+  -- Only delete the article if no user_favourites rows reference it anymore.
+  -- This avoids cascade conflicts during bulk deletes (e.g. account deletion).
   DELETE FROM favourited_articles
-  WHERE url = article_url_param AND favourited_count <= 0;
+  WHERE url = article_url_param
+    AND NOT EXISTS (SELECT 1 FROM user_favourites WHERE article_url = article_url_param);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -114,7 +117,10 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION trg_user_favourites_deleted()
 RETURNS TRIGGER AS $$
 BEGIN
-  PERFORM decrement_favourite_count(OLD.article_url);
+  PERFORM public.decrement_favourite_count(OLD.article_url);
+  RETURN OLD;
+EXCEPTION WHEN OTHERS THEN
+  RAISE LOG 'trg_user_favourites_deleted failed for %: %', OLD.article_url, SQLERRM;
   RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
