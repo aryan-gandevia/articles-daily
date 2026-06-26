@@ -116,10 +116,11 @@ CREATE TABLE IF NOT EXISTS feedback_rate_limits (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   ip_address TEXT,
-  last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(user_id),
-  UNIQUE(ip_address)
+  last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE feedback_rate_limits ADD CONSTRAINT IF NOT EXISTS feedback_rate_limits_user_id_key UNIQUE (user_id);
+ALTER TABLE feedback_rate_limits ADD CONSTRAINT IF NOT EXISTS feedback_rate_limits_ip_address_key UNIQUE (ip_address);
 
 ALTER TABLE feedback_rate_limits DISABLE ROW LEVEL SECURITY;
 
