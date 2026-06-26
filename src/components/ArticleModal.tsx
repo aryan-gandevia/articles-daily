@@ -12,13 +12,15 @@ interface ArticleModalProps {
 export function ArticleModal({ article, onClose }: ArticleModalProps) {
   const [summary, setSummary] = useState<string>("");
   const [keyTakeaways, setKeyTakeaways] = useState<string[]>([]);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const fetchSummary = useCallback(async (art: Article) => {
-    // If summary is already pre-generated (from cron), use it instantly
+    // If summary is already pre-generated (from DB), use it instantly
     if (art.summary) {
       setSummary(art.summary);
       setKeyTakeaways(art.keyTakeaways || []);
+      setIsAiGenerated(true);
       setLoading(false);
       return;
     }
@@ -27,6 +29,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
     setLoading(true);
     setSummary("");
     setKeyTakeaways([]);
+    setIsAiGenerated(false);
 
     try {
       const res = await fetch("/api/summarize", {
@@ -37,8 +40,10 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
       const data = await res.json();
       setSummary(data.summary || "Unable to generate summary.");
       setKeyTakeaways(data.keyTakeaways || []);
+      setIsAiGenerated(data.aiGenerated || false);
     } catch {
       setSummary("Failed to load summary. Please try again.");
+      setIsAiGenerated(false);
     } finally {
       setLoading(false);
     }
@@ -165,9 +170,19 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
                 >
                   {/* Summary */}
                   <div className="mb-6">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
-                      Summary
-                    </h3>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
+                        Summary
+                      </h3>
+                      {isAiGenerated && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-medium">
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                          </svg>
+                          AI Generated
+                        </span>
+                      )}
+                    </div>
                     <p className="text-foreground/90 leading-relaxed whitespace-pre-line">
                       {summary}
                     </p>

@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         summary: existing.summary,
         keyTakeaways: existing.keyTakeaways || [],
+        aiGenerated: true,
       });
     }
 
@@ -67,6 +68,9 @@ export async function POST(request: NextRequest) {
       articleText = "";
     }
 
+    // Log what we're working with
+    console.log(`[Summarize] "${title}" — scraped ${articleText.length} chars, first 200: "${articleText.slice(0, 200)}..."`);
+
     // Generate summary with Groq
     const groqKey = process.env.GROQ_API_KEY;
 
@@ -100,7 +104,7 @@ Respond ONLY with valid JSON: {"summary": "...", "keyTakeaways": ["...", "..."]}
         // Save to database for future requests
         await updateArticleSummary(url, summary, keyTakeaways);
 
-        return NextResponse.json({ summary, keyTakeaways });
+        return NextResponse.json({ summary, keyTakeaways, aiGenerated: true });
       } catch (aiError) {
         console.error("Groq summarization failed:", aiError);
       }
@@ -122,7 +126,7 @@ Respond ONLY with valid JSON: {"summary": "...", "keyTakeaways": ["...", "..."]}
         ? sentences.slice(5, 10).map((s) => s.slice(0, 150))
         : ["Visit the original article for full details"];
 
-    return NextResponse.json({ summary, keyTakeaways });
+    return NextResponse.json({ summary, keyTakeaways, aiGenerated: false });
   } catch (error) {
     console.error("Error summarizing:", error);
     return NextResponse.json(
