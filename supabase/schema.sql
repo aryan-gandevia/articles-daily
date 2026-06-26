@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS favourited_articles (
   difficulty_score INTEGER,
   summary TEXT,
   key_takeaways TEXT[],
-  favourited_count INTEGER DEFAULT 1,
+  favourited_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
