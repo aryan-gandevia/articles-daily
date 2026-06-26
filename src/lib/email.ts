@@ -50,11 +50,14 @@ export async function sendFeedbackEmail({
     </div>
   `;
 
+  // TODO: Assign each feedback submission a unique ticket number and persist
+  // tickets in the database. Associate tickets with user accounts so users can
+  // view their submissions and check real-time status from the app.
   try {
     await resend.emails.send({
       from: fromEmail,
       to: toEmail,
-      subject: "New Articles Daily Feedback",
+      subject: `New Articles Daily Feedback — ${new Date().toISOString()}`,
       html,
       attachments,
     });
