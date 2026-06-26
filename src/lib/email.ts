@@ -6,6 +6,65 @@ const fromEmail = process.env.FROM_EMAIL || "onboarding@resend.dev";
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
+export async function sendFeedbackEmail({
+  feedbackText,
+  username,
+  userEmail,
+  screenshots,
+  toEmail,
+}: {
+  feedbackText: string;
+  username?: string;
+  userEmail?: string;
+  screenshots: { filename: string; content: string; contentType: string }[];
+  toEmail: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (!resend) {
+    return { success: false, error: "RESEND_API_KEY not configured" };
+  }
+
+  const attachments = screenshots.map((s) => ({
+    filename: s.filename,
+    content: s.content,
+    content_type: s.contentType,
+  }));
+
+  const metadataLines = [
+    username ? `Username: ${username}` : null,
+    userEmail ? `User Email: ${userEmail}` : null,
+    `Submitted At: ${new Date().toISOString()}`,
+  ].filter(Boolean);
+
+  const html = `
+    <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #111827; padding: 24px;">
+      <h1 style="font-size: 24px; margin-bottom: 16px;">Articles Daily Feedback</h1>
+      <p style="font-size: 14px; color: #6b7280; margin-bottom: 16px;">
+        ${metadataLines.join("<br />")}
+      </p>
+      <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; white-space: pre-line; font-size: 15px; line-height: 1.5;">
+        ${feedbackText.replace(/\n/g, "<br />")}
+      </div>
+      <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">
+        ${screenshots.length} screenshot${screenshots.length === 1 ? "" : "s"} attached.
+      </p>
+    </div>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: fromEmail,
+      to: toEmail,
+      subject: "New Articles Daily Feedback",
+      html,
+      attachments,
+    });
+    return { success: true };
+  } catch (err) {
+    console.error("[Email] Failed to send feedback:", err);
+    return { success: false, error: "Failed to send feedback email" };
+  }
+}
+
 export async function sendDigestEmails(
   subscribers: { email: string; username: string }[],
   articles: Article[],

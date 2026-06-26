@@ -51,6 +51,9 @@ GROQ_API_KEY=gsk-your-key-here
 # Email digest (optional)
 RESEND_API_KEY=re_your-key-here
 FROM_EMAIL=onboarding@resend.dev
+
+# Feedback recipient email (optional)
+FEEDBACK_EMAIL=aryan.gandevia@gmail.com
 ```
 
 ### Email Digest Setup
@@ -59,6 +62,12 @@ FROM_EMAIL=onboarding@resend.dev
 2. Create an API key and add it as `RESEND_API_KEY`
 3. For testing, use `FROM_EMAIL=onboarding@resend.dev` (only sends to your own email)
 4. For production, verify a domain in Resend and use something like `noreply@yourdomain.com`
+
+### Feedback Setup
+
+1. Set `FEEDBACK_EMAIL` to the address where you want to receive feedback
+2. If not set, feedback defaults to `aryan.gandevia@gmail.com`
+3. Users are rate limited to 1 feedback submission every 5 minutes
 
 ## Tech Stack
 

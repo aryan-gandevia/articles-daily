@@ -110,6 +110,19 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
 
+-- ─── Feedback Rate Limiting ──────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS feedback_rate_limits (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  ip_address TEXT,
+  last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id),
+  UNIQUE(ip_address)
+);
+
+ALTER TABLE feedback_rate_limits DISABLE ROW LEVEL SECURITY;
+
 -- ─── Atomic Cron Refresh Function ──────────────────────────────────────────────
 
 -- Refreshes daily articles and popular articles in a single ACID transaction.
