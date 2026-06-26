@@ -2,13 +2,17 @@
 
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/auth-context";
 
 interface HeaderProps {
   articleCount: number;
   fetchedAt?: string;
+  user?: { id: string; username: string } | null;
+  onAuthClick: () => void;
 }
 
-export function Header({ articleCount, fetchedAt }: HeaderProps) {
+export function Header({ articleCount, fetchedAt, user, onAuthClick }: HeaderProps) {
+  const { signOut } = useAuth();
   const today = format(new Date(), "EEEE, MMMM d, yyyy");
 
   return (
@@ -16,12 +20,38 @@ export function Header({ articleCount, fetchedAt }: HeaderProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="text-center mb-10"
+      className="mb-10"
     >
+      {/* Top bar with auth */}
+      <div className="flex items-center justify-between mb-6">
+        <div />
+        <div className="flex items-center gap-3">
+          {user ? (
+            <>
+              <span className="text-sm text-muted">{user.username}</span>
+              <button
+                onClick={signOut}
+                className="text-xs text-muted hover:text-foreground transition-colors cursor-pointer"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onAuthClick}
+              className="px-3 py-1.5 text-sm rounded-lg bg-surface text-muted hover:text-foreground border border-border/50 hover:border-border transition-all cursor-pointer"
+            >
+              Sign in
+            </button>
+          )}
+        </div>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1 }}
+        className="text-center"
       >
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
           Articles{" "}

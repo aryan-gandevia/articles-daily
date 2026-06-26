@@ -54,7 +54,7 @@ export function FilterBar({
               <button
                 key={source.key}
                 onClick={() => onSourceChange(source.key)}
-                className={`relative text-sm px-3 py-1.5 rounded-md transition-colors duration-200 ${
+                className={`relative text-sm px-3 py-1.5 rounded-md transition-colors duration-200 cursor-pointer ${
                   activeSource === source.key
                     ? "text-foreground font-medium"
                     : "text-muted hover:text-foreground"
@@ -76,7 +76,7 @@ export function FilterBar({
         {/* Today filter toggle */}
         <button
           onClick={onTodayToggle}
-          className={`text-sm px-3 py-1.5 rounded-lg border transition-all duration-200 ${
+          className={`text-sm px-3 py-1.5 rounded-lg border transition-all duration-200 cursor-pointer ${
             todayOnly
               ? "bg-accent text-white border-accent shadow-sm shadow-accent/20"
               : "bg-surface text-muted border-transparent hover:text-foreground hover:border-border"
@@ -94,7 +94,7 @@ export function FilterBar({
               <button
                 key={option.key}
                 onClick={() => onSortChange(option.key)}
-                className={`relative text-sm px-3 py-1.5 rounded-md transition-colors duration-200 ${
+                className={`relative text-sm px-3 py-1.5 rounded-md transition-colors duration-200 cursor-pointer ${
                   activeSort === option.key
                     ? "text-foreground font-medium"
                     : "text-muted hover:text-foreground"
@@ -116,7 +116,7 @@ export function FilterBar({
         {/* Sort direction toggle */}
         <button
           onClick={onDirectionToggle}
-          className="flex items-center gap-1 text-sm px-2.5 py-1.5 rounded-lg bg-surface text-muted hover:text-foreground transition-colors duration-200"
+          className="flex items-center gap-1 text-sm px-2.5 py-1.5 rounded-lg bg-surface text-muted hover:text-foreground transition-colors duration-200 cursor-pointer"
           title={sortDirection === "desc" ? "Highest first" : "Lowest first"}
         >
           <motion.svg

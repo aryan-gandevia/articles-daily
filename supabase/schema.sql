@@ -27,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_articles_fetched_date ON articles(fetched_date DE
 ALTER TABLE articles DISABLE ROW LEVEL SECURITY;
 
 -- Popular articles table (articles that appear multiple times across days)
+-- Run this in SQL Editor if not already created
 CREATE TABLE IF NOT EXISTS popular_articles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   url TEXT UNIQUE NOT NULL,
@@ -55,3 +56,56 @@ CREATE INDEX IF NOT EXISTS idx_popular_articles_times_seen ON popular_articles(t
 
 -- Disable RLS
 ALTER TABLE popular_articles DISABLE ROW LEVEL SECURITY;
+
+-- ─── Favourites ──────────────────────────────────────────────────────────────
+
+-- Stores article data once, shared across all users who favourite it
+CREATE TABLE IF NOT EXISTS favourited_articles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  url TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  source TEXT NOT NULL,
+  author TEXT,
+  score INTEGER,
+  published_at TIMESTAMPTZ,
+  description TEXT,
+  tags TEXT[],
+  word_count INTEGER,
+  estimated_read_time INTEGER,
+  length_score INTEGER,
+  content_score INTEGER,
+  difficulty_score INTEGER,
+  summary TEXT,
+  key_takeaways TEXT[],
+  favourited_count INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE favourited_articles DISABLE ROW LEVEL SECURITY;
+
+-- Maps user -> favourited article (max 50 per user, enforced in app logic)
+CREATE TABLE IF NOT EXISTS user_favourites (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  article_url TEXT NOT NULL REFERENCES favourited_articles(url) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, article_url)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_favourites_user ON user_favourites(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_favourites_created ON user_favourites(user_id, created_at ASC);
+
+ALTER TABLE user_favourites DISABLE ROW LEVEL SECURITY;
+
+-- ─── User Profiles ───────────────────────────────────────────────────────────
+
+-- Stores username, optional email, notification preferences
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username TEXT UNIQUE NOT NULL,
+  email TEXT,
+  notifications_enabled BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;

@@ -24,9 +24,12 @@ interface ArticleCardProps {
   article: Article;
   index: number;
   onClick: () => void;
+  isFavourited?: boolean;
+  showFavouriteButton?: boolean;
+  onFavourite?: () => void;
 }
 
-export function ArticleCard({ article, index, onClick }: ArticleCardProps) {
+export function ArticleCard({ article, index, onClick, isFavourited, showFavouriteButton, onFavourite }: ArticleCardProps) {
   return (
     <motion.article
       initial={{ opacity: 0, y: 20 }}
@@ -86,6 +89,24 @@ export function ArticleCard({ article, index, onClick }: ArticleCardProps) {
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
+          {showFavouriteButton && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onFavourite?.();
+              }}
+              className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                isFavourited
+                  ? "text-rose-500 hover:text-rose-600"
+                  : "text-muted/40 hover:text-rose-400"
+              }`}
+              title={isFavourited ? "Remove from favourites" : "Add to favourites"}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill={isFavourited ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+          )}
           <ScorePill label="Quality" value={article.contentScore} />
           <ScorePill label="Length" value={article.lengthScore} />
           <ScorePill label="Difficulty" value={article.difficultyScore} />
