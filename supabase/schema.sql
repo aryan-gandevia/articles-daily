@@ -268,14 +268,14 @@ BEGIN
     (a->>'score')::INTEGER,
     (a->>'publishedAt')::TIMESTAMPTZ,
     (a->>'description')::TEXT,
-    ARRAY(SELECT jsonb_array_elements_text(a->'tags')),
+    CASE WHEN jsonb_typeof(a->'tags') = 'array' THEN ARRAY(SELECT jsonb_array_elements_text(a->'tags')) ELSE NULL END,
     (a->>'wordCount')::INTEGER,
     (a->>'estimatedReadTime')::INTEGER,
     (a->>'lengthScore')::INTEGER,
     (a->>'contentScore')::INTEGER,
     (a->>'difficultyScore')::INTEGER,
     (a->>'summary')::TEXT,
-    ARRAY(SELECT jsonb_array_elements_text(a->'keyTakeaways')),
+    CASE WHEN jsonb_typeof(a->'keyTakeaways') = 'array' THEN ARRAY(SELECT jsonb_array_elements_text(a->'keyTakeaways')) ELSE NULL END,
     today
   FROM jsonb_array_elements(new_articles) AS a;
 
@@ -310,14 +310,14 @@ BEGIN
       (repeat_article->>'score')::INTEGER,
       (repeat_article->>'publishedAt')::TIMESTAMPTZ,
       (repeat_article->>'description')::TEXT,
-      ARRAY(SELECT jsonb_array_elements_text(repeat_article->'tags')),
+      CASE WHEN jsonb_typeof(repeat_article->'tags') = 'array' THEN ARRAY(SELECT jsonb_array_elements_text(repeat_article->'tags')) ELSE NULL END,
       (repeat_article->>'wordCount')::INTEGER,
       (repeat_article->>'estimatedReadTime')::INTEGER,
       (repeat_article->>'lengthScore')::INTEGER,
       (repeat_article->>'contentScore')::INTEGER,
       (repeat_article->>'difficultyScore')::INTEGER,
       (repeat_article->>'summary')::TEXT,
-      ARRAY(SELECT jsonb_array_elements_text(repeat_article->'keyTakeaways')),
+      CASE WHEN jsonb_typeof(repeat_article->'keyTakeaways') = 'array' THEN ARRAY(SELECT jsonb_array_elements_text(repeat_article->'keyTakeaways')) ELSE NULL END,
       2,
       today,
       today
