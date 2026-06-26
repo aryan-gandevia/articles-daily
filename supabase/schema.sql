@@ -119,8 +119,24 @@ CREATE TABLE IF NOT EXISTS feedback_rate_limits (
   last_sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-ALTER TABLE feedback_rate_limits ADD CONSTRAINT IF NOT EXISTS feedback_rate_limits_user_id_key UNIQUE (user_id);
-ALTER TABLE feedback_rate_limits ADD CONSTRAINT IF NOT EXISTS feedback_rate_limits_ip_address_key UNIQUE (ip_address);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'feedback_rate_limits_user_id_key'
+  ) THEN
+    ALTER TABLE feedback_rate_limits
+      ADD CONSTRAINT feedback_rate_limits_user_id_key UNIQUE (user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'feedback_rate_limits_ip_address_key'
+  ) THEN
+    ALTER TABLE feedback_rate_limits
+      ADD CONSTRAINT feedback_rate_limits_ip_address_key UNIQUE (ip_address);
+  END IF;
+END $$;
 
 ALTER TABLE feedback_rate_limits DISABLE ROW LEVEL SECURITY;
 
