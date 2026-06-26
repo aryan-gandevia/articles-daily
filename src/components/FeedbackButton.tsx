@@ -10,7 +10,7 @@ export function FeedbackButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed left-4 top-12 sm:left-6 sm:top-16 z-40 px-3 py-1.5 text-sm rounded-lg bg-surface text-muted hover:text-foreground border border-border/50 hover:border-border transition-all cursor-pointer"
+        className="px-3 py-1.5 text-sm rounded-lg bg-surface text-muted hover:text-foreground border border-border/50 hover:border-border transition-all cursor-pointer"
         title="Send feedback"
       >
         Feedback
