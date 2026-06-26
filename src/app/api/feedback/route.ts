@@ -54,13 +54,20 @@ export async function POST(request: NextRequest) {
     const userId = await getUserId(request);
     const ipAddress = getClientIp(request);
 
-    const { data: existingLimit } = await supabase
+    const { data: existingLimit, error: limitError } = await supabase
       .from("feedback_rate_limits")
       .select("last_sent_at")
       .or(`user_id.eq.${userId || "00000000-0000-0000-0000-000000000000"},ip_address.eq.${ipAddress}`)
       .order("last_sent_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (limitError) {
+      console.error("[Feedback] Rate limit lookup failed:", limitError);
+      await logAppEvent("error", "api-feedback", "Rate limit lookup failed", {
+        error: limitError.message,
+      });
+    }
 
     if (existingLimit) {
       const lastSent = new Date(existingLimit.last_sent_at);
@@ -75,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert rate limit
-    await supabase.from("feedback_rate_limits").upsert(
+    const { error: upsertError } = await supabase.from("feedback_rate_limits").upsert(
       {
         user_id: userId || null,
         ip_address: userId ? null : ipAddress,
@@ -83,6 +90,13 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: userId ? "user_id" : "ip_address" }
     );
+
+    if (upsertError) {
+      console.error("[Feedback] Rate limit upsert failed:", upsertError);
+      await logAppEvent("error", "api-feedback", "Rate limit upsert failed", {
+        error: upsertError.message,
+      });
+    }
 
     // Get user metadata if requested
     let username: string | undefined;
