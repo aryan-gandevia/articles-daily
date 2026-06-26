@@ -11,6 +11,12 @@ interface User {
   notificationsEnabled: boolean;
 }
 
+interface SubscriberCount {
+  count: number;
+  max: number;
+  full: boolean;
+}
+
 interface ProfileMenuProps {
   user: User;
 }
@@ -22,6 +28,7 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(user.notificationsEnabled);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [subscriberCount, setSubscriberCount] = useState<SubscriberCount | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -35,6 +42,15 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
+  }, [open]);
+
+  // Fetch subscriber count when menu opens
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/subscribers/count")
+      .then((res) => res.json())
+      .then((data) => setSubscriberCount(data))
+      .catch((err) => console.error("[ProfileMenu] Failed to fetch subscriber count:", err));
   }, [open]);
 
   const handleSave = async () => {
@@ -122,21 +138,36 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
 
                 <label
                   className={`flex items-start gap-2 text-sm cursor-pointer ${
-                    email.trim() ? "text-muted" : "text-muted/40 cursor-not-allowed"
+                    email.trim() && !subscriberCount?.full
+                      ? "text-muted"
+                      : "text-muted/40 cursor-not-allowed"
                   }`}
-                  title={email.trim() ? "" : "Add an email first to subscribe"}
+                  title={
+                    subscriberCount?.full
+                      ? "Daily digest subscriptions are temporarily full"
+                      : email.trim()
+                      ? ""
+                      : "Add an email first to subscribe"
+                  }
                 >
                   <input
                     type="checkbox"
-                    checked={notificationsEnabled && !!email.trim()}
+                    checked={notificationsEnabled && !!email.trim() && !subscriberCount?.full}
                     onChange={(e) => {
-                      if (!email.trim()) return;
+                      if (!email.trim() || subscriberCount?.full) return;
                       setNotificationsEnabled(e.target.checked);
                     }}
-                    disabled={!email.trim()}
+                    disabled={!email.trim() || subscriberCount?.full}
                     className="mt-0.5 rounded border-border accent-accent disabled:opacity-40"
                   />
-                  <span>Send me the daily article digest via email</span>
+                  <span>
+                    Send me the daily article digest via email
+                    {subscriberCount?.full && (
+                      <span className="block text-xs text-red-500 mt-1">
+                        Subscriptions temporarily full ({subscriberCount.count}/{subscriberCount.max})
+                      </span>
+                    )}
+                  </span>
                 </label>
 
                 {message && (

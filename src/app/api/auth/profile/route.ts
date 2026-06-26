@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, logAppEvent } from "@/lib/supabase";
+import { supabase, logAppEvent, getSubscriberCount } from "@/lib/supabase";
+
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const MAX_SUBSCRIBERS = 70;
 
 async function getUserId(request: NextRequest): Promise<string | null> {
   const accessToken = request.cookies.get("access_token")?.value;
@@ -22,6 +25,32 @@ export async function PUT(request: NextRequest) {
 
     // Only allow notifications if email is provided
     const sanitizedEmail = email ? email.trim() : null;
+
+    if (sanitizedEmail && !EMAIL_REGEX.test(sanitizedEmail)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce subscriber cap if enabling notifications
+    if (notificationsEnabled && sanitizedEmail) {
+      const subscriberCount = await getSubscriberCount();
+      const { data: currentUser } = await supabase
+        .from("profiles")
+        .select("notifications_enabled")
+        .eq("id", userId)
+        .single();
+      const alreadySubscribed = currentUser?.notifications_enabled || false;
+
+      if (!alreadySubscribed && subscriberCount >= MAX_SUBSCRIBERS) {
+        return NextResponse.json(
+          { error: "Daily digest subscriptions are temporarily full. Please try again later." },
+          { status: 409 }
+        );
+      }
+    }
+
     const finalNotificationsEnabled = notificationsEnabled && !!sanitizedEmail;
 
     // Check if profile exists

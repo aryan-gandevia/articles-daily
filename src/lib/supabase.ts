@@ -248,6 +248,24 @@ export async function getSubscribers(): Promise<{ email: string; username: strin
     .map((row) => ({ email: row.email, username: row.username }));
 }
 
+/**
+ * Count the number of users subscribed to the daily digest.
+ */
+export async function getSubscriberCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("notifications_enabled", true)
+    .not("email", "is", null);
+
+  if (error) {
+    console.error("[DB] Failed to count subscribers:", error);
+    return 0;
+  }
+
+  return count || 0;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function rowToArticle(row: ArticleRow): Article {
