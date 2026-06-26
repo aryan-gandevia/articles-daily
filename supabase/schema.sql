@@ -97,6 +97,34 @@ CREATE INDEX IF NOT EXISTS idx_user_favourites_created ON user_favourites(user_i
 
 ALTER TABLE user_favourites DISABLE ROW LEVEL SECURITY;
 
+-- Decrement favourited_count and remove article if no likes remain
+CREATE OR REPLACE FUNCTION decrement_favourite_count(article_url_param TEXT)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE favourited_articles
+  SET favourited_count = GREATEST(favourited_count - 1, 0)
+  WHERE url = article_url_param;
+
+  DELETE FROM favourited_articles
+  WHERE url = article_url_param AND favourited_count <= 0;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger: when a user_favourites row is deleted, decrement and clean up
+CREATE OR REPLACE FUNCTION trg_user_favourites_deleted()
+RETURNS TRIGGER AS $$
+BEGIN
+  PERFORM decrement_favourite_count(OLD.article_url);
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_user_favourites_deleted ON user_favourites;
+CREATE TRIGGER trg_user_favourites_deleted
+AFTER DELETE ON user_favourites
+FOR EACH ROW
+EXECUTE FUNCTION trg_user_favourites_deleted();
+
 -- ─── User Profiles ───────────────────────────────────────────────────────────
 
 -- Stores username, optional email, notification preferences
