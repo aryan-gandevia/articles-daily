@@ -11,11 +11,22 @@ jobs:
   fetch-articles:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger article generation
+      - name: Generate daily articles
         run: |
           curl -X POST "${{ secrets.APP_URL }}/api/cron/generate" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
             --max-time 120 \
-            --retry 2 \
+            --retry 3 \
+            --retry-delay 10 \
+            -w "\nHTTP Status: %{http_code}\n"
+
+      - name: Dispatch digest emails
+        run: |
+          curl -X POST "${{ secrets.APP_URL }}/api/cron/dispatch-emails" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 120 \
+            --retry 3 \
+            --retry-delay 10 \
             -w "\nHTTP Status: %{http_code}\n"

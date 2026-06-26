@@ -10,11 +10,8 @@ import { scoreDifficultyWithLLM } from "@/lib/difficulty";
 import {
   getAllArticleUrls,
   getPopularArticleUrls,
-  getSubscribers,
   replaceArticles,
-  upsertPopularArticles,
 } from "@/lib/supabase";
-import { sendDigestEmails } from "@/lib/email";
 import { Article } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -71,45 +68,28 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Cron] Repeats: ${repeats.length}, New: ${newArticles.length}`);
 
-    // 4. Move repeats to popular_articles (upsert with incremented count)
-    if (repeats.length > 0) {
-      await upsertPopularArticles(repeats);
-      console.log(`[Cron] Upserted ${repeats.length} popular articles`);
-    }
-
-    // 5. Take top 30 new articles
+    // 4. Take top 30 new articles
     const todaysArticles = newArticles.slice(0, 30);
 
-    // 6. Enrich with real word counts
+    // 5. Enrich with real word counts
     const enriched = await enrichWithWordCounts(todaysArticles);
     console.log("[Cron] Word counts enriched");
 
-    // 7. Rank articles (length, content quality)
+    // 6. Rank articles (length, content quality)
     const ranked = rankArticles(enriched);
 
-    // 8. Score difficulty with Groq LLM (1 API call for all articles)
+    // 7. Score difficulty with Groq LLM (1 API call for all articles)
     const withDifficulty = await scoreDifficultyWithLLM(ranked);
     console.log("[Cron] Difficulty scored via LLM");
 
-    // 9. Wipe articles table and insert fresh articles
-    await replaceArticles(withDifficulty);
-    console.log("[Cron] Written to database.");
-
-    // 10. Send daily digest emails to subscribers
-    const subscribers = await getSubscribers();
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
-    const { sent, failed } = await sendDigestEmails(
-      subscribers,
-      withDifficulty,
-      appUrl
-    );
+    // 8. Atomically refresh articles and popular_articles tables
+    await replaceArticles(withDifficulty, repeats);
+    console.log("[Cron] Database refreshed atomically.");
 
     return NextResponse.json({
       success: true,
       articlesProcessed: withDifficulty.length,
       repeatsFound: repeats.length,
-      emailsSent: sent,
-      emailsFailed: failed,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {

@@ -69,48 +69,57 @@ export async function getAllArticleUrls(): Promise<string[]> {
 }
 
 /**
- * Wipe the articles table and insert fresh articles for today.
+ * Atomically refresh the articles and popular_articles tables.
+ * Uses a PostgreSQL function for ACID compliance.
  */
-export async function replaceArticles(articles: Article[]): Promise<void> {
-  const today = new Date().toISOString().split("T")[0];
-
-  // Delete ALL rows from articles table
-  const { error: deleteError } = await supabase
-    .from("articles")
-    .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000"); // deletes all rows
-
-  if (deleteError) {
-    console.error("[DB] Failed to clear articles table:", deleteError);
-  }
-
-  // Insert fresh articles
-  const rows = articles.map((a) => ({
+export async function replaceArticles(
+  articles: Article[],
+  repeats: Article[]
+): Promise<void> {
+  const newArticlesJson = articles.map((a) => ({
     url: a.url,
     title: a.title,
     source: a.source,
     author: a.author || null,
     score: a.score || null,
-    published_at: a.publishedAt || null,
+    publishedAt: a.publishedAt || null,
     description: a.description || null,
     tags: a.tags || null,
-    word_count: a.wordCount || null,
-    estimated_read_time: a.estimatedReadTime || null,
-    length_score: a.lengthScore || null,
-    content_score: a.contentScore || null,
-    difficulty_score: a.difficultyScore || null,
+    wordCount: a.wordCount || null,
+    estimatedReadTime: a.estimatedReadTime || null,
+    lengthScore: a.lengthScore || null,
+    contentScore: a.contentScore || null,
+    difficultyScore: a.difficultyScore || null,
     summary: a.summary || null,
-    key_takeaways: a.keyTakeaways || null,
-    fetched_date: today,
+    keyTakeaways: a.keyTakeaways || null,
   }));
 
-  const { error: insertError } = await supabase
-    .from("articles")
-    .insert(rows);
+  const repeatsJson = repeats.map((a) => ({
+    url: a.url,
+    title: a.title,
+    source: a.source,
+    author: a.author || null,
+    score: a.score || null,
+    publishedAt: a.publishedAt || null,
+    description: a.description || null,
+    tags: a.tags || null,
+    wordCount: a.wordCount || null,
+    estimatedReadTime: a.estimatedReadTime || null,
+    lengthScore: a.lengthScore || null,
+    contentScore: a.contentScore || null,
+    difficultyScore: a.difficultyScore || null,
+    summary: a.summary || null,
+    keyTakeaways: a.keyTakeaways || null,
+  }));
 
-  if (insertError) {
-    console.error("[DB] Failed to insert articles:", insertError);
-    throw insertError;
+  const { error } = await supabase.rpc("refresh_daily_articles", {
+    new_articles: newArticlesJson,
+    repeats: repeatsJson,
+  });
+
+  if (error) {
+    console.error("[DB] Failed to refresh daily articles:", error);
+    throw error;
   }
 }
 
@@ -195,60 +204,6 @@ export async function getPopularArticleUrls(): Promise<string[]> {
   }
 
   return (data || []).map((row: { url: string }) => row.url);
-}
-
-/**
- * Upsert articles into popular_articles table.
- * If already exists, increment times_seen and update last_seen_date.
- */
-export async function upsertPopularArticles(articles: Article[]): Promise<void> {
-  const today = new Date().toISOString().split("T")[0];
-
-  for (const article of articles) {
-    // Check if already in popular_articles
-    const { data: existing } = await supabase
-      .from("popular_articles")
-      .select("times_seen")
-      .eq("url", article.url)
-      .single();
-
-    if (existing) {
-      // Increment times_seen
-      await supabase
-        .from("popular_articles")
-        .update({
-          times_seen: (existing.times_seen || 2) + 1,
-          last_seen_date: today,
-          score: article.score || null,
-          content_score: article.contentScore || null,
-        })
-        .eq("url", article.url);
-    } else {
-      // Insert new popular article
-      await supabase
-        .from("popular_articles")
-        .insert({
-          url: article.url,
-          title: article.title,
-          source: article.source,
-          author: article.author || null,
-          score: article.score || null,
-          published_at: article.publishedAt || null,
-          description: article.description || null,
-          tags: article.tags || null,
-          word_count: article.wordCount || null,
-          estimated_read_time: article.estimatedReadTime || null,
-          length_score: article.lengthScore || null,
-          content_score: article.contentScore || null,
-          difficulty_score: article.difficultyScore || null,
-          summary: article.summary || null,
-          key_takeaways: article.keyTakeaways || null,
-          times_seen: 2,
-          first_seen_date: today,
-          last_seen_date: today,
-        });
-    }
-  }
 }
 
 // ─── Subscribers ───────────────────────────────────────────────────────────────

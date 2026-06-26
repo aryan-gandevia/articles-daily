@@ -109,3 +109,115 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 
 ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
+
+-- ─── Atomic Cron Refresh Function ──────────────────────────────────────────────
+
+-- Refreshes daily articles and popular articles in a single ACID transaction.
+-- new_articles: array of article objects to insert into the articles table
+-- repeats: array of article objects that appeared on a previous day (upserted to popular_articles)
+CREATE OR REPLACE FUNCTION refresh_daily_articles(
+  new_articles JSONB,
+  repeats JSONB
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  today DATE := CURRENT_DATE;
+  repeat_article JSONB;
+  new_article JSONB;
+BEGIN
+  -- All operations below happen in a single transaction
+
+  -- 1. Wipe the articles table
+  DELETE FROM articles;
+
+  -- 2. Insert fresh articles
+  INSERT INTO articles (
+    url,
+    title,
+    source,
+    author,
+    score,
+    published_at,
+    description,
+    tags,
+    word_count,
+    estimated_read_time,
+    length_score,
+    content_score,
+    difficulty_score,
+    summary,
+    key_takeaways,
+    fetched_date
+  )
+  SELECT
+    (a->>'url')::TEXT,
+    (a->>'title')::TEXT,
+    (a->>'source')::TEXT,
+    (a->>'author')::TEXT,
+    (a->>'score')::INTEGER,
+    (a->>'publishedAt')::TIMESTAMPTZ,
+    (a->>'description')::TEXT,
+    (a->'tags')::TEXT[],
+    (a->>'wordCount')::INTEGER,
+    (a->>'estimatedReadTime')::INTEGER,
+    (a->>'lengthScore')::INTEGER,
+    (a->>'contentScore')::INTEGER,
+    (a->>'difficultyScore')::INTEGER,
+    (a->>'summary')::TEXT,
+    (a->'keyTakeaways')::TEXT[],
+    today
+  FROM jsonb_array_elements(new_articles) AS a;
+
+  -- 3. Upsert repeats into popular_articles
+  FOR repeat_article IN SELECT * FROM jsonb_array_elements(repeats)
+  LOOP
+    INSERT INTO popular_articles (
+      url,
+      title,
+      source,
+      author,
+      score,
+      published_at,
+      description,
+      tags,
+      word_count,
+      estimated_read_time,
+      length_score,
+      content_score,
+      difficulty_score,
+      summary,
+      key_takeaways,
+      times_seen,
+      first_seen_date,
+      last_seen_date
+    )
+    VALUES (
+      (repeat_article->>'url')::TEXT,
+      (repeat_article->>'title')::TEXT,
+      (repeat_article->>'source')::TEXT,
+      (repeat_article->>'author')::TEXT,
+      (repeat_article->>'score')::INTEGER,
+      (repeat_article->>'publishedAt')::TIMESTAMPTZ,
+      (repeat_article->>'description')::TEXT,
+      (repeat_article->'tags')::TEXT[],
+      (repeat_article->>'wordCount')::INTEGER,
+      (repeat_article->>'estimatedReadTime')::INTEGER,
+      (repeat_article->>'lengthScore')::INTEGER,
+      (repeat_article->>'contentScore')::INTEGER,
+      (repeat_article->>'difficultyScore')::INTEGER,
+      (repeat_article->>'summary')::TEXT,
+      (repeat_article->'keyTakeaways')::TEXT[],
+      2,
+      today,
+      today
+    )
+    ON CONFLICT (url) DO UPDATE SET
+      times_seen = popular_articles.times_seen + 1,
+      last_seen_date = today,
+      score = EXCLUDED.score,
+      content_score = EXCLUDED.content_score;
+  END LOOP;
+END;
+$$;
