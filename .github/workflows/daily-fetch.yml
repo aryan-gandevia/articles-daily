@@ -1,0 +1,21 @@
+name: Daily Article Fetch
+
+on:
+  schedule:
+    # 6:00 AM EST = 11:00 AM UTC (EST is UTC-5)
+    # During EDT (daylight saving): 6:00 AM EDT = 10:00 AM UTC
+    - cron: "0 10 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  fetch-articles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger article generation
+        run: |
+          curl -X POST "${{ secrets.APP_URL }}/api/cron/generate" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 120 \
+            --retry 2 \
+            -w "\nHTTP Status: %{http_code}\n"

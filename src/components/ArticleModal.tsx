@@ -15,6 +15,15 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
   const [loading, setLoading] = useState(false);
 
   const fetchSummary = useCallback(async (art: Article) => {
+    // If summary is already pre-generated (from cron), use it instantly
+    if (art.summary) {
+      setSummary(art.summary);
+      setKeyTakeaways(art.keyTakeaways || []);
+      setLoading(false);
+      return;
+    }
+
+    // Otherwise fetch on-demand (cold start / fallback)
     setLoading(true);
     setSummary("");
     setKeyTakeaways([]);
