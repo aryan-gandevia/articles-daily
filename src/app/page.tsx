@@ -222,7 +222,7 @@ export default function Home() {
                   />
                 )}
                 <span className={`relative z-10 ${viewMode === mode ? "text-foreground" : "text-muted"}`}>
-                  {mode === "today" ? "Today\u2019s Articles" : mode === "popular" ? "Popular" : "Favourites"}
+                  {mode === "today" ? "Today\u2019s Articles" : mode === "popular" ? "Popular" : "Your Favourites"}
                 </span>
               </button>
             ))}
