@@ -239,7 +239,7 @@ BEGIN
   -- All operations below happen in a single transaction
 
   -- 1. Wipe the articles table
-  DELETE FROM articles;
+  DELETE FROM articles WHERE TRUE;
 
   -- 2. Insert fresh articles
   INSERT INTO articles (
