@@ -157,7 +157,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
-                      Screenshots (optional, max {MAX_SCREENSHOTS}) — paste or attach
+                      Screenshots (optional, max {MAX_SCREENSHOTS}) — paste (Ctrl+V anywhere) or attach
                     </label>
                     <input
                       type="file"
