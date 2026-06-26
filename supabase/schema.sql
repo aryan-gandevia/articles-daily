@@ -268,14 +268,14 @@ BEGIN
     (a->>'score')::INTEGER,
     (a->>'publishedAt')::TIMESTAMPTZ,
     (a->>'description')::TEXT,
-    (a->'tags')::TEXT[],
+    ARRAY(SELECT jsonb_array_elements_text(a->'tags')),
     (a->>'wordCount')::INTEGER,
     (a->>'estimatedReadTime')::INTEGER,
     (a->>'lengthScore')::INTEGER,
     (a->>'contentScore')::INTEGER,
     (a->>'difficultyScore')::INTEGER,
     (a->>'summary')::TEXT,
-    (a->'keyTakeaways')::TEXT[],
+    ARRAY(SELECT jsonb_array_elements_text(a->'keyTakeaways')),
     today
   FROM jsonb_array_elements(new_articles) AS a;
 
@@ -310,14 +310,14 @@ BEGIN
       (repeat_article->>'score')::INTEGER,
       (repeat_article->>'publishedAt')::TIMESTAMPTZ,
       (repeat_article->>'description')::TEXT,
-      (repeat_article->'tags')::TEXT[],
+      ARRAY(SELECT jsonb_array_elements_text(repeat_article->'tags')),
       (repeat_article->>'wordCount')::INTEGER,
       (repeat_article->>'estimatedReadTime')::INTEGER,
       (repeat_article->>'lengthScore')::INTEGER,
       (repeat_article->>'contentScore')::INTEGER,
       (repeat_article->>'difficultyScore')::INTEGER,
       (repeat_article->>'summary')::TEXT,
-      (repeat_article->'keyTakeaways')::TEXT[],
+      ARRAY(SELECT jsonb_array_elements_text(repeat_article->'keyTakeaways')),
       2,
       today,
       today
