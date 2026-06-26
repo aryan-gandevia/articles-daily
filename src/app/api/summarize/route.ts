@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import Groq from "groq-sdk";
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,13 +54,47 @@ export async function POST(request: NextRequest) {
       articleText = articleText
         .replace(/\s+/g, " ")
         .replace(/\n{3,}/g, "\n\n")
-        .slice(0, 8000); // Limit content
+        .slice(0, 6000); // Limit content for fast inference
     } catch {
       articleText = `Unable to fetch full article content for: ${title}`;
     }
 
-    // Try to use OpenAI if available
+    // Try Groq first (free, fast), then OpenAI, then fallback
+    const groqKey = process.env.GROQ_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
+
+    const systemPrompt = "You are a technical article summarizer. Be concise and precise.";
+    const userPrompt = `Summarize this article. Provide:
+1. A concise summary (2-3 short paragraphs)
+2. 3-5 key takeaways
+
+Article title: ${title}
+Article content: ${articleText}
+
+Respond ONLY with valid JSON in this exact format:
+{"summary": "...", "keyTakeaways": ["...", "..."]}`;
+
+    if (groqKey) {
+      try {
+        const groq = new Groq({ apiKey: groqKey });
+        const completion = await groq.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.3,
+          max_tokens: 1024,
+          response_format: { type: "json_object" },
+        });
+
+        const text = completion.choices[0]?.message?.content || "";
+        const parsed = JSON.parse(text);
+        return NextResponse.json(parsed);
+      } catch (groqError) {
+        console.error("Groq summarization failed:", groqError);
+      }
+    }
 
     if (openaiKey) {
       try {
@@ -68,21 +103,14 @@ export async function POST(request: NextRequest) {
 
         const { text } = await generateText({
           model: openai("gpt-4o-mini"),
-          prompt: `You are a technical article summarizer. Given the following article content, provide:
-1. A concise summary (2-3 paragraphs)
-2. 3-5 key takeaways as bullet points
-
-Article title: ${title}
-Article content: ${articleText}
-
-Format your response as JSON with this structure:
-{"summary": "...", "keyTakeaways": ["...", "..."]}`,
+          prompt: `${systemPrompt}\n\n${userPrompt}`,
+          maxRetries: 1,
         });
 
         const parsed = JSON.parse(text);
         return NextResponse.json(parsed);
       } catch (aiError) {
-        console.error("AI summarization failed, using fallback:", aiError);
+        console.error("OpenAI summarization failed:", aiError);
       }
     }
 
@@ -102,7 +130,7 @@ Format your response as JSON with this structure:
         ? sentences.slice(5, 10).map((s) => s.slice(0, 150))
         : [
             "Visit the original article for full details",
-            "This is an extractive summary - set OPENAI_API_KEY for AI-powered summaries",
+            "Set GROQ_API_KEY in .env.local for free AI-powered summaries (console.groq.com)",
           ];
 
     return NextResponse.json({ summary, keyTakeaways });
