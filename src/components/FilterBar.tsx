@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, LayoutGroup } from "framer-motion";
-import { Source, SortCategory } from "@/lib/types";
+import { Source, SortCategory, SortDirection } from "@/lib/types";
 
 const sources: { key: Source | "all"; label: string }[] = [
   { key: "all", label: "All" },
@@ -12,27 +12,31 @@ const sources: { key: Source | "all"; label: string }[] = [
   { key: "stackoverflow", label: "SO" },
 ];
 
-const sortOptions: { key: SortCategory; label: string; description: string }[] = [
-  { key: "content", label: "Best Content", description: "Highest quality" },
-  { key: "length", label: "Length", description: "Reading time" },
-  { key: "difficulty", label: "Difficulty", description: "Complexity level" },
+const sortOptions: { key: SortCategory; label: string }[] = [
+  { key: "content", label: "Best Content" },
+  { key: "length", label: "Length" },
+  { key: "difficulty", label: "Difficulty" },
 ];
 
 interface FilterBarProps {
   activeSource: Source | "all";
   activeSort: SortCategory;
+  sortDirection: SortDirection;
   todayOnly: boolean;
   onSourceChange: (source: Source | "all") => void;
   onSortChange: (sort: SortCategory) => void;
+  onDirectionToggle: () => void;
   onTodayToggle: () => void;
 }
 
 export function FilterBar({
   activeSource,
   activeSort,
+  sortDirection,
   todayOnly,
   onSourceChange,
   onSortChange,
+  onDirectionToggle,
   onTodayToggle,
 }: FilterBarProps) {
   return (
@@ -82,8 +86,8 @@ export function FilterBar({
         </button>
       </div>
 
-      {/* Bottom row: Sort options */}
-      <div className="flex items-center justify-between">
+      {/* Bottom row: Sort options + direction toggle */}
+      <div className="flex items-center gap-2">
         <LayoutGroup id="sort-filters">
           <div className="flex items-center gap-1 bg-surface rounded-lg p-1">
             {sortOptions.map((option) => (
@@ -108,6 +112,32 @@ export function FilterBar({
             ))}
           </div>
         </LayoutGroup>
+
+        {/* Sort direction toggle */}
+        <button
+          onClick={onDirectionToggle}
+          className="flex items-center gap-1 text-sm px-2.5 py-1.5 rounded-lg bg-surface text-muted hover:text-foreground transition-colors duration-200"
+          title={sortDirection === "desc" ? "Highest first" : "Lowest first"}
+        >
+          <motion.svg
+            animate={{ rotate: sortDirection === "asc" ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 9l-7 7-7-7"
+            />
+          </motion.svg>
+          <span className="text-xs">
+            {sortDirection === "desc" ? "High" : "Low"}
+          </span>
+        </button>
       </div>
     </motion.div>
   );

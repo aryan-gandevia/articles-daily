@@ -70,7 +70,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.97 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="fixed inset-4 sm:inset-x-auto sm:inset-y-8 sm:mx-auto sm:max-w-2xl bg-card rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col"
+            className="fixed inset-4 sm:inset-x-auto sm:inset-y-8 sm:mx-auto sm:max-w-2xl sm:w-full sm:h-[calc(100vh-4rem)] bg-card rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="p-6 pb-4 border-b border-border/50">

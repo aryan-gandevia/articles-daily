@@ -24,3 +24,5 @@ export interface ArticleWithSummary extends Article {
 }
 
 export type SortCategory = "length" | "content" | "difficulty";
+export type SortDirection = "asc" | "desc";
+  

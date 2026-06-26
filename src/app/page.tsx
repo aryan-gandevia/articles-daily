@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Article, Source, SortCategory } from "@/lib/types";
+import { Article, Source, SortCategory, SortDirection } from "@/lib/types";
 import { Header } from "@/components/Header";
 import { FilterBar } from "@/components/FilterBar";
 import { ArticleCard } from "@/components/ArticleCard";
@@ -16,6 +16,7 @@ export default function Home() {
   const [fetchedAt, setFetchedAt] = useState<string>();
   const [activeSource, setActiveSource] = useState<Source | "all">("all");
   const [activeSort, setActiveSort] = useState<SortCategory>("content");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [todayOnly, setTodayOnly] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
@@ -57,20 +58,21 @@ export default function Home() {
       });
     }
 
-    // Sort by selected category (descending)
+    // Sort by selected category
+    const dir = sortDirection === "desc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       switch (activeSort) {
         case "content":
-          return (b.contentScore || 0) - (a.contentScore || 0);
+          return ((b.contentScore || 0) - (a.contentScore || 0)) * dir;
         case "length":
-          return (b.lengthScore || 0) - (a.lengthScore || 0);
+          return ((b.lengthScore || 0) - (a.lengthScore || 0)) * dir;
         case "difficulty":
-          return (b.difficultyScore || 0) - (a.difficultyScore || 0);
+          return ((b.difficultyScore || 0) - (a.difficultyScore || 0)) * dir;
         default:
           return 0;
       }
     });
-  }, [articles, activeSource, activeSort, todayOnly]);
+  }, [articles, activeSource, activeSort, sortDirection, todayOnly]);
 
   if (error) {
     return (
@@ -100,9 +102,11 @@ export default function Home() {
           <FilterBar
             activeSource={activeSource}
             activeSort={activeSort}
+            sortDirection={sortDirection}
             todayOnly={todayOnly}
             onSourceChange={setActiveSource}
             onSortChange={setActiveSort}
+            onDirectionToggle={() => setSortDirection((prev) => prev === "desc" ? "asc" : "desc")}
             onTodayToggle={() => setTodayOnly((prev) => !prev)}
           />
 
