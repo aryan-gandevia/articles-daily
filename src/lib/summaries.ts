@@ -33,7 +33,8 @@ export async function generateSummaryBatch(articles: Article[]): Promise<Article
           const content = await fetchArticleContent(article.url);
           const summary = await summarizeWithGroq(groq, article.title, content);
           return summary;
-        } catch {
+        } catch (err) {
+          console.error(`[Summaries] Failed for "${article.title}":`, err);
           return { summary: "Summary unavailable.", keyTakeaways: [] };
         }
       })
@@ -42,6 +43,11 @@ export async function generateSummaryBatch(articles: Article[]): Promise<Article
     for (let j = 0; j < batch.length; j++) {
       const idx = i + j;
       results[idx] = { ...results[idx], ...summaries[j] };
+    }
+
+    // Rate limit pause between batches (Groq free: ~30 req/min)
+    if (i + BATCH_SIZE < articles.length) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
 
@@ -52,9 +58,12 @@ async function fetchArticleContent(url: string): Promise<string> {
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
       },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(8000),
+      redirect: "follow",
     });
 
     if (!res.ok) return "";
@@ -62,20 +71,20 @@ async function fetchArticleContent(url: string): Promise<string> {
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    $("script, style, nav, footer, header, aside, .ad, .advertisement, .sidebar, .comments").remove();
+    $("script, style, nav, footer, header, aside, .ad, .advertisement, .sidebar, .comments, .related, .share").remove();
 
-    const selectors = ["article", "[role='main']", ".post-content", ".article-content", ".entry-content", ".markdown-body", "main", ".content"];
+    const selectors = ["article", "[role='main']", ".post-content", ".article-content", ".entry-content", ".markdown-body", "main", ".content", "#content", ".post", ".story"];
     let text = "";
 
     for (const selector of selectors) {
       const el = $(selector);
-      if (el.length && el.text().trim().length > 200) {
+      if (el.length && el.text().trim().length > 100) {
         text = el.text().trim();
         break;
       }
     }
 
-    if (!text || text.length < 200) {
+    if (!text || text.length < 100) {
       text = $("body").text().trim();
     }
 
@@ -90,8 +99,9 @@ async function summarizeWithGroq(
   title: string,
   content: string
 ): Promise<{ summary: string; keyTakeaways: string[] }> {
-  if (!content || content.length < 100) {
-    return { summary: "Content could not be retrieved for summarization.", keyTakeaways: [] };
+  // If we couldn't scrape enough content, ask LLM to summarize based on title alone
+  if (!content || content.length < 50) {
+    content = `(Article content unavailable - summarize based on title alone) Title: ${title}`;
   }
 
   const completion = await groq.chat.completions.create({

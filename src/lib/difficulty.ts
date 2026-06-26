@@ -49,17 +49,28 @@ Example: [3, 7, 5, 8, 2, ...]`,
     const text = completion.choices[0]?.message?.content || "";
     const parsed = JSON.parse(text);
 
-    // Handle both {scores: [...]} and [...] formats
-    const scores: number[] = Array.isArray(parsed) ? parsed : (parsed.scores || parsed.difficulties || []);
+    // Find the array of scores regardless of what key Groq used
+    let scores: number[] = [];
+    if (Array.isArray(parsed)) {
+      scores = parsed;
+    } else {
+      // Search all values for the first array of numbers
+      for (const value of Object.values(parsed)) {
+        if (Array.isArray(value) && value.length > 0 && typeof value[0] === "number") {
+          scores = value as number[];
+          break;
+        }
+      }
+    }
 
-    if (scores.length === articles.length) {
+    if (scores.length >= articles.length) {
       return articles.map((article, i) => ({
         ...article,
         difficultyScore: Math.min(10, Math.max(1, Math.round(scores[i]))),
       }));
     }
 
-    console.warn(`[Difficulty] LLM returned ${scores.length} scores for ${articles.length} articles, keeping heuristic scores`);
+    console.warn(`[Difficulty] LLM returned ${scores.length} scores for ${articles.length} articles. Raw: ${text.slice(0, 200)}`);
     return articles;
   } catch (error) {
     console.error("[Difficulty] LLM scoring failed:", error);
