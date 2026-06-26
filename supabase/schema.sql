@@ -97,6 +97,16 @@ CREATE INDEX IF NOT EXISTS idx_user_favourites_created ON user_favourites(user_i
 
 ALTER TABLE user_favourites DISABLE ROW LEVEL SECURITY;
 
+-- Increment favourited_count
+CREATE OR REPLACE FUNCTION increment_favourite_count(article_url_param TEXT)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE favourited_articles
+  SET favourited_count = COALESCE(favourited_count, 0) + 1
+  WHERE url = article_url_param;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Decrement favourited_count and remove article if no likes remain
 CREATE OR REPLACE FUNCTION decrement_favourite_count(article_url_param TEXT)
 RETURNS VOID AS $$

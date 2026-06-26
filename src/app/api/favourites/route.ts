@@ -175,10 +175,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Increment favourited_count
-  await supabase
-    .from("favourited_articles")
-    .update({ favourited_count: (count || 0) + 1 })
-    .eq("url", article.url);
+  await supabase.rpc("increment_favourite_count", { article_url_param: article.url });
 
   return NextResponse.json({ success: true, count: currentCount + 1 });
 }
