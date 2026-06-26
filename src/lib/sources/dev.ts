@@ -1,4 +1,5 @@
 import { Article } from "../types";
+import { logAppEvent } from "../supabase";
 
 interface DevArticle {
   id: number;
@@ -32,7 +33,11 @@ export async function fetchDevArticles(): Promise<Article[]> {
       estimatedReadTime: article.reading_time_minutes,
     }));
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error fetching DEV.to:", error);
+    await logAppEvent("error", "source-dev", "Failed to fetch DEV.to articles", {
+      error: errorMessage,
+    });
     return [];
   }
 }

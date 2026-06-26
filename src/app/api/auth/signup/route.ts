@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, logAppEvent } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +50,9 @@ export async function POST(request: NextRequest) {
 
     if (authError || !authData.user) {
       console.error("[Auth] Failed to create user:", authError);
+      await logAppEvent("error", "auth-signup", "Failed to create auth user", {
+        error: authError?.message || "Unknown error",
+      });
       return NextResponse.json(
         { error: authError?.message || "Failed to create account" },
         { status: 500 }
@@ -68,6 +71,10 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error("[Auth] Failed to create profile:", profileError);
+      await logAppEvent("error", "auth-signup", "Failed to create profile", {
+        error: profileError.message,
+        userId: authData.user.id,
+      });
       // Clean up the auth user
       await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
@@ -117,7 +124,11 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("[Auth] Signup error:", error);
+    await logAppEvent("error", "auth-signup", "Unexpected signup error", {
+      error: errorMessage,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

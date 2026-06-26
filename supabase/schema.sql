@@ -123,6 +123,22 @@ CREATE TABLE IF NOT EXISTS feedback_rate_limits (
 
 ALTER TABLE feedback_rate_limits DISABLE ROW LEVEL SECURITY;
 
+-- ─── Application Logs ─────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS app_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  level TEXT NOT NULL,
+  source TEXT NOT NULL,
+  message TEXT NOT NULL,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_logs_source ON app_logs(source);
+CREATE INDEX IF NOT EXISTS idx_app_logs_created_at ON app_logs(created_at DESC);
+
+ALTER TABLE app_logs DISABLE ROW LEVEL SECURITY;
+
 -- ─── Atomic Cron Refresh Function ──────────────────────────────────────────────
 
 -- Refreshes daily articles and popular articles in a single ACID transaction.

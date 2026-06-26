@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { logAppEvent } from "./supabase";
 import { Article } from "./types";
 
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -63,7 +64,12 @@ export async function sendFeedbackEmail({
     });
     return { success: true };
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
     console.error("[Email] Failed to send feedback:", err);
+    await logAppEvent("error", "email", "Failed to send feedback email", {
+      error: errorMessage,
+      to: toEmail,
+    });
     return { success: false, error: "Failed to send feedback email" };
   }
 }
@@ -113,7 +119,12 @@ export async function sendDigestEmails(
 
       sent++;
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error(`[Email] Failed to send to ${subscriber.email}:`, err);
+      await logAppEvent("error", "email", "Failed to send digest email", {
+        error: errorMessage,
+        subscriberEmail: subscriber.email,
+      });
       failed++;
     }
   }

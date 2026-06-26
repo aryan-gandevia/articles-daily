@@ -1,4 +1,5 @@
 import { Article } from "../types";
+import { logAppEvent } from "../supabase";
 
 interface SOQuestion {
   question_id: number;
@@ -33,7 +34,11 @@ export async function fetchStackOverflow(): Promise<Article[]> {
       tags: q.tags.slice(0, 5),
     }));
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error fetching Stack Overflow:", error);
+    await logAppEvent("error", "source-stackoverflow", "Failed to fetch Stack Overflow", {
+      error: errorMessage,
+    });
     return [];
   }
 }

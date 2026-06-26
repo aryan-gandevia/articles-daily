@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTodaysArticles, getPopularArticles } from "@/lib/supabase";
+import { getTodaysArticles, getPopularArticles, logAppEvent } from "@/lib/supabase";
 import { fetchHackerNews } from "@/lib/sources/hackernews";
 import { fetchGitHubTrending } from "@/lib/sources/github";
 import { fetchDevArticles } from "@/lib/sources/dev";
@@ -60,7 +60,12 @@ export async function GET(request: NextRequest) {
       fromCache: false,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error fetching articles:", error);
+    await logAppEvent("error", "api-articles", "Failed to fetch articles", {
+      error: errorMessage,
+      view,
+    });
     return NextResponse.json(
       { error: "Failed to fetch articles" },
       { status: 500 }

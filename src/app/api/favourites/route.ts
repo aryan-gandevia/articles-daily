@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, logAppEvent } from "@/lib/supabase";
 import { Article } from "@/lib/types";
 
 // Helper to get user ID from session cookie
@@ -39,6 +39,10 @@ export async function GET(request: NextRequest) {
     .in("url", urls);
 
   if (articlesError) {
+    await logAppEvent("error", "api-favourites", "Failed to fetch favourited articles", {
+      error: articlesError.message,
+      userId,
+    });
     return NextResponse.json({ error: "Failed to fetch favourites" }, { status: 500 });
   }
 
@@ -79,6 +83,10 @@ export async function POST(request: NextRequest) {
     .eq("user_id", userId);
 
   if (countError) {
+    await logAppEvent("error", "api-favourites", "Failed to check favourites count", {
+      error: countError.message,
+      userId,
+    });
     return NextResponse.json({ error: "Failed to check favourites count" }, { status: 500 });
   }
 
@@ -137,6 +145,11 @@ export async function POST(request: NextRequest) {
 
   if (upsertError) {
     console.error("[Favourites] Failed to upsert article:", upsertError);
+    await logAppEvent("error", "api-favourites", "Failed to upsert favourited article", {
+      error: upsertError.message,
+      userId,
+      url: article.url,
+    });
     return NextResponse.json({ error: "Failed to save article" }, { status: 500 });
   }
 
@@ -153,6 +166,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Already favourited" }, { status: 409 });
     }
     console.error("[Favourites] Failed to add favourite:", favError);
+    await logAppEvent("error", "api-favourites", "Failed to add favourite mapping", {
+      error: favError.message,
+      userId,
+      url: article.url,
+    });
     return NextResponse.json({ error: "Failed to favourite" }, { status: 500 });
   }
 
@@ -186,6 +204,11 @@ export async function DELETE(request: NextRequest) {
     .eq("article_url", url);
 
   if (error) {
+    await logAppEvent("error", "api-favourites", "Failed to remove favourite", {
+      error: error.message,
+      userId,
+      url,
+    });
     return NextResponse.json({ error: "Failed to remove favourite" }, { status: 500 });
   }
 

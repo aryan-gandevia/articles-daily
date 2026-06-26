@@ -1,4 +1,5 @@
 import { Article } from "../types";
+import { logAppEvent } from "../supabase";
 
 interface HNItem {
   id: number;
@@ -40,7 +41,11 @@ export async function fetchHackerNews(): Promise<Article[]> {
         description: `${item.score} points | ${item.descendants ?? 0} comments`,
       }));
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error fetching Hacker News:", error);
+    await logAppEvent("error", "source-hackernews", "Failed to fetch Hacker News", {
+      error: errorMessage,
+    });
     return [];
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, logAppEvent } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +61,11 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("[Auth] Signin error:", error);
+    await logAppEvent("error", "auth-signin", "Unexpected signin error", {
+      error: errorMessage,
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

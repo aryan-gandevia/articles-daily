@@ -10,6 +10,7 @@ import { scoreDifficultyWithLLM } from "@/lib/difficulty";
 import {
   getAllArticleUrls,
   getPopularArticleUrls,
+  logAppEvent,
   replaceArticles,
 } from "@/lib/supabase";
 import { Article } from "@/lib/types";
@@ -93,7 +94,11 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("[Cron] Failed:", error);
+    await logAppEvent("error", "cron-generate", "Daily article generation failed", {
+      error: errorMessage,
+    });
     return NextResponse.json(
       { error: "Failed to generate digest" },
       { status: 500 }

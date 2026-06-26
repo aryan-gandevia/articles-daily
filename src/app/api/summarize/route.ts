@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 import Groq from "groq-sdk";
-import { getArticleByUrl, updateArticleSummary } from "@/lib/supabase";
+import { getArticleByUrl, updateArticleSummary, logAppEvent } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
+  let url: string | undefined;
+  let title: string | undefined;
+
   try {
-    const { url, title } = await request.json();
+    const body = await request.json();
+    url = body.url;
+    title = body.title;
 
     if (!url) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
@@ -109,7 +114,13 @@ Respond ONLY with valid JSON: {"summary": "...", "keyTakeaways": ["...", "..."]}
 
         return NextResponse.json({ summary, keyTakeaways, aiGenerated: true });
       } catch (aiError) {
+        const errorMessage = aiError instanceof Error ? aiError.message : String(aiError);
         console.error("Groq summarization failed:", aiError);
+        await logAppEvent("error", "api-summarize", "Groq summarization failed", {
+          error: errorMessage,
+          url,
+          title,
+        });
       }
     }
 
@@ -131,7 +142,12 @@ Respond ONLY with valid JSON: {"summary": "...", "keyTakeaways": ["...", "..."]}
 
     return NextResponse.json({ summary, keyTakeaways, aiGenerated: false });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error summarizing:", error);
+    await logAppEvent("error", "api-summarize", "Unexpected summarization error", {
+      error: errorMessage,
+      url: typeof url === "string" ? url : undefined,
+    });
     return NextResponse.json(
       { error: "Failed to summarize article" },
       { status: 500 }

@@ -206,6 +206,26 @@ export async function getPopularArticleUrls(): Promise<string[]> {
   return (data || []).map((row: { url: string }) => row.url);
 }
 
+// ─── Application Logging ───────────────────────────────────────────────────────
+
+export async function logAppEvent(
+  level: "info" | "warn" | "error",
+  source: string,
+  message: string,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  const { error } = await supabase.from("app_logs").insert({
+    level,
+    source,
+    message,
+    metadata: metadata || null,
+  });
+
+  if (error) {
+    console.error("[Logger] Failed to write log:", error);
+  }
+}
+
 // ─── Subscribers ───────────────────────────────────────────────────────────────
 
 /**

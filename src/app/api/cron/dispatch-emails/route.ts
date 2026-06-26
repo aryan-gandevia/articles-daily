@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTodaysArticles, getSubscribers } from "@/lib/supabase";
+import { getTodaysArticles, getSubscribers, logAppEvent } from "@/lib/supabase";
 import { sendDigestEmails } from "@/lib/email";
 
 export const maxDuration = 60;
@@ -36,6 +36,14 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Cron] Email dispatch complete: ${sent} sent, ${failed} failed`);
 
+    if (failed > 0) {
+      await logAppEvent("warn", "dispatch-emails", "Some digest emails failed", {
+        sent,
+        failed,
+        subscribersCount: subscribers.length,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       articlesCount: articles.length,
@@ -45,7 +53,11 @@ export async function POST(request: NextRequest) {
       dispatchedAt: new Date().toISOString(),
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("[Cron] Email dispatch failed:", error);
+    await logAppEvent("error", "dispatch-emails", "Email dispatch failed", {
+      error: errorMessage,
+    });
     return NextResponse.json(
       { error: "Failed to dispatch emails" },
       { status: 500 }

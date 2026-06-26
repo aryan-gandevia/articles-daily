@@ -1,4 +1,5 @@
 import { Article } from "../types";
+import { logAppEvent } from "../supabase";
 
 export async function fetchInfoQ(): Promise<Article[]> {
   try {
@@ -38,7 +39,11 @@ export async function fetchInfoQ(): Promise<Article[]> {
 
     return articles;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error fetching InfoQ:", error);
+    await logAppEvent("error", "source-infoq", "Failed to fetch InfoQ", {
+      error: errorMessage,
+    });
     return [];
   }
 }

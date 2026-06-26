@@ -1,4 +1,5 @@
 import { Article } from "../types";
+import { logAppEvent } from "../supabase";
 
 interface GitHubRepo {
   id: number;
@@ -43,7 +44,11 @@ export async function fetchGitHubTrending(): Promise<Article[]> {
       tags: [repo.language, ...repo.topics.slice(0, 3)].filter(Boolean) as string[],
     }));
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Error fetching GitHub:", error);
+    await logAppEvent("error", "source-github", "Failed to fetch GitHub trending", {
+      error: errorMessage,
+    });
     return [];
   }
 }
