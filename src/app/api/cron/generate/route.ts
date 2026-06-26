@@ -6,9 +6,8 @@ import { fetchStackOverflow } from "@/lib/sources/stackoverflow";
 import { fetchInfoQ } from "@/lib/sources/infoq";
 import { enrichWithWordCounts } from "@/lib/wordcount";
 import { rankArticles } from "@/lib/ranking";
-import { setCachedDigest } from "@/lib/cache";
 import { scoreDifficultyWithLLM } from "@/lib/difficulty";
-import { generateSummaryBatch } from "@/lib/summaries";
+import { replaceArticles } from "@/lib/supabase";
 import { Article } from "@/lib/types";
 
 export const maxDuration = 60; // Allow up to 60s on Vercel Pro, 10s on Hobby
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
       fetchInfoQ(),
     ]);
 
-    // Limit to 30 articles total (top from each source)
+    // Limit to 30 articles total
     const allArticles: Article[] = [
       ...hn.slice(0, 8),
       ...github.slice(0, 6),
@@ -52,34 +51,17 @@ export async function POST(request: NextRequest) {
     // 3. Rank articles (length, content quality)
     const ranked = rankArticles(enriched);
 
-    // 4. Score difficulty with Groq LLM
+    // 4. Score difficulty with Groq LLM (1 API call for all articles)
     const withDifficulty = await scoreDifficultyWithLLM(ranked);
     console.log("[Cron] Difficulty scored via LLM");
 
-    // 5. Generate AI summaries for all articles
-    const withSummaries = await generateSummaryBatch(withDifficulty);
-    console.log("[Cron] Summaries generated");
-
-    // 6. Store in memory cache
-    const sources = {
-      hackernews: hn.slice(0, 8).length,
-      github: github.slice(0, 6).length,
-      dev: dev.slice(0, 6).length,
-      stackoverflow: so.slice(0, 5).length,
-      infoq: infoq.slice(0, 5).length,
-    };
-
-    setCachedDigest({
-      articles: withSummaries,
-      generatedAt: new Date().toISOString(),
-      sources,
-    });
-
-    console.log("[Cron] Cache populated. Done!");
+    // 5. Write to database (replaces today's articles)
+    await replaceArticles(withDifficulty);
+    console.log("[Cron] Written to database. Done!");
 
     return NextResponse.json({
       success: true,
-      articlesProcessed: withSummaries.length,
+      articlesProcessed: withDifficulty.length,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {

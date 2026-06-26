@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.0",
+    "@supabase/supabase-js": "^2.108.2",
     "ai": "^7.0.2",
     "cheerio": "^1.2.0",
     "date-fns": "^4.4.0",
