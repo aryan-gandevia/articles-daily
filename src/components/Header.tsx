@@ -2,17 +2,16 @@
 
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { useAuth } from "@/lib/auth-context";
+import { ProfileMenu } from "@/components/ProfileMenu";
 
 interface HeaderProps {
   articleCount: number;
   fetchedAt?: string;
-  user?: { id: string; username: string } | null;
+  user?: { id: string; username: string; email: string | null; notificationsEnabled: boolean } | null;
   onAuthClick: () => void;
 }
 
 export function Header({ articleCount, fetchedAt, user, onAuthClick }: HeaderProps) {
-  const { signOut } = useAuth();
   const today = format(new Date(), "EEEE, MMMM d, yyyy");
 
   return (
@@ -27,15 +26,7 @@ export function Header({ articleCount, fetchedAt, user, onAuthClick }: HeaderPro
         <div />
         <div className="flex items-center gap-3">
           {user ? (
-            <>
-              <span className="text-sm text-muted">{user.username}</span>
-              <button
-                onClick={signOut}
-                className="text-xs text-muted hover:text-foreground transition-colors cursor-pointer"
-              >
-                Sign out
-              </button>
-            </>
+            <ProfileMenu user={user} />
           ) : (
             <button
               onClick={onAuthClick}
