@@ -38,17 +38,37 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length + screenshots.length > MAX_SCREENSHOTS) {
-      setError(`Maximum ${MAX_SCREENSHOTS} screenshots allowed`);
-      return;
-    }
-    setScreenshots((prev) => [...prev, ...files].slice(0, MAX_SCREENSHOTS));
-    setError(null);
+    addScreenshots(files);
   };
 
   const removeScreenshot = (index: number) => {
     setScreenshots((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const addScreenshots = (files: File[]) => {
+    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) return;
+    if (imageFiles.length + screenshots.length > MAX_SCREENSHOTS) {
+      setError(`Maximum ${MAX_SCREENSHOTS} screenshots allowed`);
+      return;
+    }
+    setScreenshots((prev) => [...prev, ...imageFiles].slice(0, MAX_SCREENSHOTS));
+    setError(null);
+  };
+
+  const handlePaste = (e: ClipboardEvent) => {
+    const files = Array.from(e.clipboardData?.files || []);
+    if (files.length > 0) {
+      e.preventDefault();
+      addScreenshots(files);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [isOpen, screenshots.length]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +157,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
-                      Screenshots (optional, max {MAX_SCREENSHOTS})
+                      Screenshots (optional, max {MAX_SCREENSHOTS}) — paste or attach
                     </label>
                     <input
                       type="file"
