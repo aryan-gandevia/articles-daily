@@ -19,32 +19,47 @@ export async function PUT(request: NextRequest) {
 
   const { email, notificationsEnabled } = await request.json();
 
-  const { data: existing, error: fetchError } = await supabase
-    .from("profiles")
-    .select("email")
-    .eq("id", userId)
-    .single();
-
-  if (fetchError && fetchError.code !== "PGRST116") {
-    console.error("[Profile] Failed to fetch profile:", fetchError);
-    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
-  }
-
   // Only allow notifications if email is provided
   const sanitizedEmail = email ? email.trim() : null;
   const finalNotificationsEnabled = notificationsEnabled && !!sanitizedEmail;
 
-  const { error: updateError } = await supabase
+  // Check if profile exists
+  const { data: existing } = await supabase
     .from("profiles")
-    .upsert({
+    .select("id")
+    .eq("id", userId)
+    .single();
+
+  let result;
+  if (existing) {
+    result = await supabase
+      .from("profiles")
+      .update({
+        email: sanitizedEmail,
+        notifications_enabled: finalNotificationsEnabled,
+      })
+      .eq("id", userId);
+  } else {
+    // Should not normally happen (profile created at signup), but handle it
+    const { data: usernameData } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .single();
+    result = await supabase.from("profiles").insert({
       id: userId,
+      username: usernameData?.username || "unknown",
       email: sanitizedEmail,
       notifications_enabled: finalNotificationsEnabled,
-    }, { onConflict: "id" });
+    });
+  }
 
-  if (updateError) {
-    console.error("[Profile] Failed to update profile:", updateError);
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+  if (result.error) {
+    console.error("[Profile] Failed to update profile:", result.error);
+    return NextResponse.json(
+      { error: `Failed to update profile: ${result.error.message || result.error.code}` },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({

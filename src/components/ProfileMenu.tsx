@@ -111,18 +111,30 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (!e.target.value.trim()) setNotificationsEnabled(false);
+                    }}
                     placeholder="Add email for notifications"
                     className="w-full px-3 py-2 text-sm rounded-lg bg-surface border border-border/50 text-foreground placeholder:text-muted focus:outline-none focus:border-accent transition-colors"
                   />
                 </div>
 
-                <label className="flex items-start gap-2 text-sm text-muted cursor-pointer">
+                <label
+                  className={`flex items-start gap-2 text-sm cursor-pointer ${
+                    email.trim() ? "text-muted" : "text-muted/40 cursor-not-allowed"
+                  }`}
+                  title={email.trim() ? "" : "Add an email first to subscribe"}
+                >
                   <input
                     type="checkbox"
-                    checked={notificationsEnabled}
-                    onChange={(e) => setNotificationsEnabled(e.target.checked)}
-                    className="mt-0.5 rounded border-border accent-accent"
+                    checked={notificationsEnabled && !!email.trim()}
+                    onChange={(e) => {
+                      if (!email.trim()) return;
+                      setNotificationsEnabled(e.target.checked);
+                    }}
+                    disabled={!email.trim()}
+                    className="mt-0.5 rounded border-border accent-accent disabled:opacity-40"
                   />
                   <span>Send me the daily article digest via email</span>
                 </label>
