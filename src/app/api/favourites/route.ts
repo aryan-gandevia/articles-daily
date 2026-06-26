@@ -154,6 +154,13 @@ export async function POST(request: NextRequest) {
   }
 
   // Add user_favourites mapping and increment count atomically
+  const { data: beforeRow } = await supabase
+    .from("favourited_articles")
+    .select("favourited_count")
+    .eq("url", article.url)
+    .single();
+  console.log("[Favourites] Count before add:", beforeRow?.favourited_count, "for", article.url);
+
   const { data: inserted, error: favError } = await supabase.rpc("add_favourite", {
     user_id_param: userId,
     article_url_param: article.url,
@@ -172,6 +179,13 @@ export async function POST(request: NextRequest) {
   if (!inserted) {
     return NextResponse.json({ error: "Already favourited" }, { status: 409 });
   }
+
+  const { data: afterRow } = await supabase
+    .from("favourited_articles")
+    .select("favourited_count")
+    .eq("url", article.url)
+    .single();
+  console.log("[Favourites] Count after add:", afterRow?.favourited_count, "for", article.url);
 
   return NextResponse.json({ success: true, count: currentCount + 1 });
 }
