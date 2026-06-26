@@ -45,12 +45,15 @@ export default function Home() {
       filtered = filtered.filter((a) => a.source === activeSource);
     }
 
-    // Filter by published today
+    // Filter by published today (using local timezone)
     if (todayOnly) {
-      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const todayEnd = todayStart + 24 * 60 * 60 * 1000;
       filtered = filtered.filter((a) => {
         if (!a.publishedAt) return false;
-        return a.publishedAt.startsWith(today);
+        const pubTime = new Date(a.publishedAt).getTime();
+        return pubTime >= todayStart && pubTime < todayEnd;
       });
     }
 
