@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface HeaderProps {
   articleCount: number;
@@ -25,6 +26,7 @@ export function Header({ articleCount, fetchedAt, user, onAuthClick }: HeaderPro
       <div className="flex items-center justify-between mb-6">
         <div />
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           {user ? (
             <ProfileMenu user={user} />
           ) : (

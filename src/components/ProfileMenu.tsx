@@ -166,7 +166,7 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
 
                   <button
                     onClick={handleDeleteAccount}
-                    className="w-full py-2 text-sm rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100 transition-colors cursor-pointer"
+                    className="w-full py-2 text-sm rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100 dark:bg-rose-950 dark:text-rose-300 dark:hover:bg-rose-900 dark:border-rose-900 transition-colors cursor-pointer"
                   >
                     Delete account
                   </button>

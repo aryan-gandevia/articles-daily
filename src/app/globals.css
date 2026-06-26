@@ -12,6 +12,18 @@
   --surface: #f1f5f9;
 }
 
+.dark {
+  --background: #0f0f1a;
+  --foreground: #f1f5f9;
+  --accent: #5b7cf9;
+  --accent-light: #8aa4ff;
+  --muted: #9ca3af;
+  --border: #27273a;
+  --card: #181825;
+  --card-hover: #1e1e2e;
+  --surface: #13131f;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
