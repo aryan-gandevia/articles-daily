@@ -107,6 +107,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Atomically add a favourite and increment count, returning whether it was inserted
+CREATE OR REPLACE FUNCTION add_favourite(user_id_param UUID, article_url_param TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+  inserted BOOLEAN;
+BEGIN
+  INSERT INTO user_favourites (user_id, article_url)
+  VALUES (user_id_param, article_url_param)
+  ON CONFLICT (user_id, article_url) DO NOTHING
+  RETURNING TRUE INTO inserted;
+
+  IF inserted THEN
+    PERFORM increment_favourite_count(article_url_param);
+  END IF;
+
+  RETURN COALESCE(inserted, FALSE);
+END;
+$$ LANGUAGE plpgsql;
+
 -- Decrement favourited_count and remove article if no likes remain
 CREATE OR REPLACE FUNCTION decrement_favourite_count(article_url_param TEXT)
 RETURNS VOID AS $$

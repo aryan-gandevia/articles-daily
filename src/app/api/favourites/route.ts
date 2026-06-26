@@ -153,18 +153,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to save article" }, { status: 500 });
   }
 
-  // Add user_favourites mapping
-  const { error: favError } = await supabase
-    .from("user_favourites")
-    .insert({
-      user_id: userId,
-      article_url: article.url,
-    });
+  // Add user_favourites mapping and increment count atomically
+  const { data: inserted, error: favError } = await supabase.rpc("add_favourite", {
+    user_id_param: userId,
+    article_url_param: article.url,
+  });
 
   if (favError) {
-    if (favError.code === "23505") {
-      return NextResponse.json({ error: "Already favourited" }, { status: 409 });
-    }
     console.error("[Favourites] Failed to add favourite:", favError);
     await logAppEvent("error", "api-favourites", "Failed to add favourite mapping", {
       error: favError.message,
@@ -174,8 +169,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to favourite" }, { status: 500 });
   }
 
-  // Increment favourited_count
-  await supabase.rpc("increment_favourite_count", { article_url_param: article.url });
+  if (!inserted) {
+    return NextResponse.json({ error: "Already favourited" }, { status: 409 });
+  }
 
   return NextResponse.json({ success: true, count: currentCount + 1 });
 }
