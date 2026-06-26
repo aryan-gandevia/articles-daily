@@ -251,6 +251,28 @@ export async function upsertPopularArticles(articles: Article[]): Promise<void> 
   }
 }
 
+// ─── Subscribers ───────────────────────────────────────────────────────────────
+
+/**
+ * Get all users subscribed to the daily digest email.
+ */
+export async function getSubscribers(): Promise<{ email: string; username: string }[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("username, email")
+    .eq("notifications_enabled", true)
+    .not("email", "is", null);
+
+  if (error) {
+    console.error("[DB] Failed to fetch subscribers:", error);
+    return [];
+  }
+
+  return (data || [])
+    .filter((row): row is { username: string; email: string } => !!row.email && !!row.username)
+    .map((row) => ({ email: row.email, username: row.username }));
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function rowToArticle(row: ArticleRow): Article {

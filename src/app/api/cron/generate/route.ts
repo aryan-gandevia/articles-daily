@@ -10,9 +10,11 @@ import { scoreDifficultyWithLLM } from "@/lib/difficulty";
 import {
   getAllArticleUrls,
   getPopularArticleUrls,
+  getSubscribers,
   replaceArticles,
   upsertPopularArticles,
 } from "@/lib/supabase";
+import { sendDigestEmails } from "@/lib/email";
 import { Article } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -91,12 +93,23 @@ export async function POST(request: NextRequest) {
 
     // 9. Wipe articles table and insert fresh articles
     await replaceArticles(withDifficulty);
-    console.log("[Cron] Written to database. Done!");
+    console.log("[Cron] Written to database.");
+
+    // 10. Send daily digest emails to subscribers
+    const subscribers = await getSubscribers();
+    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const { sent, failed } = await sendDigestEmails(
+      subscribers,
+      withDifficulty,
+      appUrl
+    );
 
     return NextResponse.json({
       success: true,
       articlesProcessed: withDifficulty.length,
       repeatsFound: repeats.length,
+      emailsSent: sent,
+      emailsFailed: failed,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {

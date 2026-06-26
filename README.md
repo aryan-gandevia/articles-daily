@@ -28,16 +28,37 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## AI Summaries (Optional)
+## Environment Variables
 
-For AI-powered summaries using GPT-4o-mini, set your OpenAI API key:
+Create a `.env.local` file with the following variables:
 
 ```bash
-# .env.local
-OPENAI_API_KEY=sk-your-key-here
+# Supabase (required for database + auth)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Cron job secret (required for /api/cron/generate)
+CRON_SECRET=any-random-secret
+
+# App URL (used in emails and cron)
+APP_URL=https://your-app.vercel.app
+
+# AI summaries (optional)
+GROQ_API_KEY=gsk-your-key-here
+
+# Email digest (optional)
+RESEND_API_KEY=re_your-key-here
+FROM_EMAIL=onboarding@resend.dev
 ```
 
-Without this key, the app falls back to extractive summaries parsed from the article HTML.
+### Email Digest Setup
+
+1. Sign up at [resend.com](https://resend.com)
+2. Create an API key and add it as `RESEND_API_KEY`
+3. For testing, use `FROM_EMAIL=onboarding@resend.dev` (only sends to your own email)
+4. For production, verify a domain in Resend and use something like `noreply@yourdomain.com`
 
 ## Tech Stack
 
