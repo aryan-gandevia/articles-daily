@@ -5,11 +5,11 @@ import { format, isToday, parseISO } from "date-fns";
 import { Article } from "@/lib/types";
 
 const sourceColors: Record<string, string> = {
-  hackernews: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
-  github: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
-  dev: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
-  infoq: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
-  stackoverflow: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  hackernews: "bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-300",
+  github: "bg-gray-200 text-gray-800 dark:bg-gray-500/20 dark:text-gray-300",
+  dev: "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300",
+  infoq: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300",
+  stackoverflow: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
 };
 
 const sourceLabels: Record<string, string> = {
@@ -79,7 +79,7 @@ export function ArticleCard({ article, index, onClick, isFavourited, showFavouri
                 {article.tags.slice(0, 3).map((tag) => (
                   <span
                     key={tag}
-                    className="text-xs text-muted/70 bg-surface px-1.5 py-0.5 rounded"
+                    className="text-xs text-muted bg-surface px-1.5 py-0.5 rounded border border-border/50"
                   >
                     {tag}
                   </span>
@@ -120,9 +120,9 @@ function ScorePill({ label, value }: { label: string; value?: number }) {
   if (!value) return null;
 
   const getColor = (v: number) => {
-    if (v <= 3) return "text-emerald-600 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-500/20";
-    if (v <= 6) return "text-amber-600 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/20";
-    return "text-rose-600 bg-rose-50 dark:text-rose-300 dark:bg-rose-500/20";
+    if (v <= 3) return "text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/20";
+    if (v <= 6) return "text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-500/20";
+    return "text-rose-700 bg-rose-100 dark:text-rose-300 dark:bg-rose-500/20";
   };
 
   return (
