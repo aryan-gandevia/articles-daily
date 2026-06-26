@@ -7,10 +7,15 @@ import { fetchInfoQ } from "@/lib/sources/infoq";
 import { enrichWithWordCounts } from "@/lib/wordcount";
 import { rankArticles } from "@/lib/ranking";
 import { scoreDifficultyWithLLM } from "@/lib/difficulty";
-import { replaceArticles } from "@/lib/supabase";
+import {
+  getAllArticleUrls,
+  getPopularArticleUrls,
+  replaceArticles,
+  upsertPopularArticles,
+} from "@/lib/supabase";
 import { Article } from "@/lib/types";
 
-export const maxDuration = 60; // Allow up to 60s on Vercel Pro, 10s on Hobby
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   // Verify the request is from our cron job
@@ -24,7 +29,16 @@ export async function POST(request: NextRequest) {
   try {
     console.log("[Cron] Starting daily article generation...");
 
-    // 1. Fetch from all sources in parallel
+    // 1. Get previously seen URLs (from yesterday's articles + popular)
+    const [previousUrls, popularUrls] = await Promise.all([
+      getAllArticleUrls(),
+      getPopularArticleUrls(),
+    ]);
+    const allKnownUrls = new Set([...previousUrls, ...popularUrls]);
+
+    console.log(`[Cron] Known URLs: ${allKnownUrls.size} (${previousUrls.length} from articles, ${popularUrls.length} from popular)`);
+
+    // 2. Fetch from all sources in parallel (fetch more to have room after filtering)
     const [hn, github, dev, so, infoq] = await Promise.all([
       fetchHackerNews(),
       fetchGitHubTrending(),
@@ -33,35 +47,56 @@ export async function POST(request: NextRequest) {
       fetchInfoQ(),
     ]);
 
-    // Limit to 30 articles total
-    const allArticles: Article[] = [
-      ...hn.slice(0, 8),
-      ...github.slice(0, 6),
-      ...dev.slice(0, 6),
-      ...so.slice(0, 5),
-      ...infoq.slice(0, 5),
-    ];
+    const allFetched: Article[] = [...hn, ...github, ...dev, ...so, ...infoq];
+    console.log(`[Cron] Fetched ${allFetched.length} articles from sources`);
 
-    console.log(`[Cron] Fetched ${allArticles.length} articles`);
+    // 3. Separate into repeats (seen before) and new articles
+    const repeats: Article[] = [];
+    const newArticles: Article[] = [];
 
-    // 2. Enrich with real word counts
-    const enriched = await enrichWithWordCounts(allArticles);
+    for (const article of allFetched) {
+      if (previousUrls.includes(article.url)) {
+        // Was in yesterday's articles table — it's a repeat
+        repeats.push(article);
+      } else if (!popularUrls.includes(article.url)) {
+        // Not in popular either — genuinely new
+        newArticles.push(article);
+      } else {
+        // Already in popular_articles — still a repeat, increment count
+        repeats.push(article);
+      }
+    }
+
+    console.log(`[Cron] Repeats: ${repeats.length}, New: ${newArticles.length}`);
+
+    // 4. Move repeats to popular_articles (upsert with incremented count)
+    if (repeats.length > 0) {
+      await upsertPopularArticles(repeats);
+      console.log(`[Cron] Upserted ${repeats.length} popular articles`);
+    }
+
+    // 5. Take top 30 new articles
+    const todaysArticles = newArticles.slice(0, 30);
+
+    // 6. Enrich with real word counts
+    const enriched = await enrichWithWordCounts(todaysArticles);
     console.log("[Cron] Word counts enriched");
 
-    // 3. Rank articles (length, content quality)
+    // 7. Rank articles (length, content quality)
     const ranked = rankArticles(enriched);
 
-    // 4. Score difficulty with Groq LLM (1 API call for all articles)
+    // 8. Score difficulty with Groq LLM (1 API call for all articles)
     const withDifficulty = await scoreDifficultyWithLLM(ranked);
     console.log("[Cron] Difficulty scored via LLM");
 
-    // 5. Write to database (replaces today's articles)
+    // 9. Wipe articles table and insert fresh articles
     await replaceArticles(withDifficulty);
     console.log("[Cron] Written to database. Done!");
 
     return NextResponse.json({
       success: true,
       articlesProcessed: withDifficulty.length,
+      repeatsFound: repeats.length,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {

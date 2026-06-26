@@ -25,7 +25,12 @@ interface ArticleRow {
   summary: string | null;
   key_takeaways: string[] | null;
   fetched_date: string;
+  times_seen?: number;
+  first_seen_date?: string;
+  last_seen_date?: string;
 }
+
+// ─── Today's Articles ────────────────────────────────────────────────────────
 
 /**
  * Get today's articles from the database.
@@ -48,22 +53,38 @@ export async function getTodaysArticles(): Promise<Article[]> {
 }
 
 /**
- * Clear today's articles and insert fresh ones.
+ * Get all existing URLs from the articles table (used by cron to detect repeats).
+ */
+export async function getAllArticleUrls(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("url");
+
+  if (error) {
+    console.error("[DB] Failed to fetch article URLs:", error);
+    return [];
+  }
+
+  return (data || []).map((row: { url: string }) => row.url);
+}
+
+/**
+ * Wipe the articles table and insert fresh articles for today.
  */
 export async function replaceArticles(articles: Article[]): Promise<void> {
   const today = new Date().toISOString().split("T")[0];
 
-  // Delete today's articles
+  // Delete ALL rows from articles table
   const { error: deleteError } = await supabase
     .from("articles")
     .delete()
-    .eq("fetched_date", today);
+    .neq("id", "00000000-0000-0000-0000-000000000000"); // deletes all rows
 
   if (deleteError) {
-    console.error("[DB] Failed to delete old articles:", deleteError);
+    console.error("[DB] Failed to clear articles table:", deleteError);
   }
 
-  // Insert new articles
+  // Insert fresh articles
   const rows = articles.map((a) => ({
     url: a.url,
     title: a.title,
@@ -94,36 +115,143 @@ export async function replaceArticles(articles: Article[]): Promise<void> {
 }
 
 /**
- * Update a single article's summary in the database.
+ * Update a single article's summary in the specified table.
  */
 export async function updateArticleSummary(
   url: string,
   summary: string,
-  keyTakeaways: string[]
+  keyTakeaways: string[],
+  table: "articles" | "popular_articles" = "articles"
 ): Promise<void> {
   const { error } = await supabase
-    .from("articles")
+    .from(table)
     .update({ summary, key_takeaways: keyTakeaways })
     .eq("url", url);
 
   if (error) {
-    console.error("[DB] Failed to update summary:", error);
+    console.error(`[DB] Failed to update summary in ${table}:`, error);
   }
 }
 
 /**
- * Get a single article by URL.
+ * Get a single article by URL, checking both tables.
  */
-export async function getArticleByUrl(url: string): Promise<Article | null> {
-  const { data, error } = await supabase
+export async function getArticleByUrl(url: string): Promise<(Article & { table: string }) | null> {
+  // Check articles table first
+  const { data: articleData } = await supabase
     .from("articles")
     .select("*")
     .eq("url", url)
     .single();
 
-  if (error || !data) return null;
-  return rowToArticle(data as ArticleRow);
+  if (articleData) {
+    return { ...rowToArticle(articleData as ArticleRow), table: "articles" };
+  }
+
+  // Check popular_articles table
+  const { data: popularData } = await supabase
+    .from("popular_articles")
+    .select("*")
+    .eq("url", url)
+    .single();
+
+  if (popularData) {
+    return { ...rowToArticle(popularData as ArticleRow), table: "popular_articles" };
+  }
+
+  return null;
 }
+
+// ─── Popular Articles ────────────────────────────────────────────────────────
+
+/**
+ * Get all popular articles, sorted by times_seen.
+ */
+export async function getPopularArticles(): Promise<Article[]> {
+  const { data, error } = await supabase
+    .from("popular_articles")
+    .select("*")
+    .order("times_seen", { ascending: false });
+
+  if (error) {
+    console.error("[DB] Failed to fetch popular articles:", error);
+    return [];
+  }
+
+  return (data as ArticleRow[]).map(rowToArticle);
+}
+
+/**
+ * Get all URLs from the popular_articles table.
+ */
+export async function getPopularArticleUrls(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("popular_articles")
+    .select("url");
+
+  if (error) {
+    console.error("[DB] Failed to fetch popular article URLs:", error);
+    return [];
+  }
+
+  return (data || []).map((row: { url: string }) => row.url);
+}
+
+/**
+ * Upsert articles into popular_articles table.
+ * If already exists, increment times_seen and update last_seen_date.
+ */
+export async function upsertPopularArticles(articles: Article[]): Promise<void> {
+  const today = new Date().toISOString().split("T")[0];
+
+  for (const article of articles) {
+    // Check if already in popular_articles
+    const { data: existing } = await supabase
+      .from("popular_articles")
+      .select("times_seen")
+      .eq("url", article.url)
+      .single();
+
+    if (existing) {
+      // Increment times_seen
+      await supabase
+        .from("popular_articles")
+        .update({
+          times_seen: (existing.times_seen || 2) + 1,
+          last_seen_date: today,
+          score: article.score || null,
+          content_score: article.contentScore || null,
+        })
+        .eq("url", article.url);
+    } else {
+      // Insert new popular article
+      await supabase
+        .from("popular_articles")
+        .insert({
+          url: article.url,
+          title: article.title,
+          source: article.source,
+          author: article.author || null,
+          score: article.score || null,
+          published_at: article.publishedAt || null,
+          description: article.description || null,
+          tags: article.tags || null,
+          word_count: article.wordCount || null,
+          estimated_read_time: article.estimatedReadTime || null,
+          length_score: article.lengthScore || null,
+          content_score: article.contentScore || null,
+          difficulty_score: article.difficultyScore || null,
+          summary: article.summary || null,
+          key_takeaways: article.keyTakeaways || null,
+          times_seen: 2,
+          first_seen_date: today,
+          last_seen_date: today,
+        });
+    }
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function rowToArticle(row: ArticleRow): Article {
   return {

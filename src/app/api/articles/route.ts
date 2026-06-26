@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { getTodaysArticles } from "@/lib/supabase";
+import { NextRequest, NextResponse } from "next/server";
+import { getTodaysArticles, getPopularArticles } from "@/lib/supabase";
 import { fetchHackerNews } from "@/lib/sources/hackernews";
 import { fetchGitHubTrending } from "@/lib/sources/github";
 import { fetchDevArticles } from "@/lib/sources/dev";
@@ -8,14 +8,26 @@ import { fetchInfoQ } from "@/lib/sources/infoq";
 import { enrichWithWordCounts } from "@/lib/wordcount";
 import { rankArticles } from "@/lib/ranking";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const view = request.nextUrl.searchParams.get("view") || "today";
+
   try {
-    // Try to read from database first (populated by cron)
+    if (view === "popular") {
+      const articles = await getPopularArticles();
+      return NextResponse.json({
+        articles,
+        view: "popular",
+        fetchedAt: new Date().toISOString(),
+      });
+    }
+
+    // Default: today's articles
     const dbArticles = await getTodaysArticles();
 
     if (dbArticles.length > 0) {
       return NextResponse.json({
         articles: dbArticles,
+        view: "today",
         fetchedAt: new Date().toISOString(),
         fromCache: true,
       });
@@ -43,6 +55,7 @@ export async function GET() {
 
     return NextResponse.json({
       articles: rankedArticles,
+      view: "today",
       fetchedAt: new Date().toISOString(),
       fromCache: false,
     });

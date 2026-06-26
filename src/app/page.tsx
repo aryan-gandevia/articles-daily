@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import { Article, Source, SortCategory, SortDirection } from "@/lib/types";
 import { Header } from "@/components/Header";
 import { FilterBar } from "@/components/FilterBar";
@@ -9,11 +10,14 @@ import { ArticleModal } from "@/components/ArticleModal";
 import { LoadingState } from "@/components/LoadingState";
 import { Footer } from "@/components/Footer";
 
+type ViewMode = "today" | "popular";
+
 export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string>();
+  const [viewMode, setViewMode] = useState<ViewMode>("today");
   const [activeSource, setActiveSource] = useState<Source | "all">("all");
   const [activeSort, setActiveSort] = useState<SortCategory>("content");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -22,8 +26,10 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchArticles() {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch("/api/articles");
+        const res = await fetch(`/api/articles?view=${viewMode}`);
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setArticles(data.articles || []);
@@ -36,7 +42,7 @@ export default function Home() {
       }
     }
     fetchArticles();
-  }, []);
+  }, [viewMode]);
 
   const filteredAndSorted = useMemo(() => {
     let filtered = articles;
@@ -99,6 +105,40 @@ export default function Home() {
         <>
           <Header articleCount={articles.length} fetchedAt={fetchedAt} />
 
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 mb-6 p-1 bg-surface rounded-xl w-fit">
+            <button
+              onClick={() => setViewMode("today")}
+              className="relative px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            >
+              {viewMode === "today" && (
+                <motion.div
+                  layoutId="viewToggle"
+                  className="absolute inset-0 bg-card rounded-lg shadow-sm"
+                  transition={{ type: "spring", duration: 0.4 }}
+                />
+              )}
+              <span className={`relative z-10 ${viewMode === "today" ? "text-foreground" : "text-muted"}`}>
+                Today&apos;s Articles
+              </span>
+            </button>
+            <button
+              onClick={() => setViewMode("popular")}
+              className="relative px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            >
+              {viewMode === "popular" && (
+                <motion.div
+                  layoutId="viewToggle"
+                  className="absolute inset-0 bg-card rounded-lg shadow-sm"
+                  transition={{ type: "spring", duration: 0.4 }}
+                />
+              )}
+              <span className={`relative z-10 ${viewMode === "popular" ? "text-foreground" : "text-muted"}`}>
+                Popular Articles
+              </span>
+            </button>
+          </div>
+
           <FilterBar
             activeSource={activeSource}
             activeSort={activeSort}
@@ -123,7 +163,11 @@ export default function Home() {
 
           {filteredAndSorted.length === 0 && (
             <div className="text-center py-16">
-              <p className="text-muted">No articles found for this filter.</p>
+              <p className="text-muted">
+                {viewMode === "popular"
+                  ? "No popular articles yet. Articles that appear across multiple days will show up here."
+                  : "No articles found for this filter."}
+              </p>
             </div>
           )}
 

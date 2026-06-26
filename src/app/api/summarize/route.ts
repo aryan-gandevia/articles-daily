@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
-    // Check if summary already exists in DB
+    // Check if summary already exists in DB (checks both tables)
     const existing = await getArticleByUrl(url);
     if (existing?.summary) {
       return NextResponse.json({
@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
         aiGenerated: true,
       });
     }
+
+    // Determine which table this article belongs to
+    const targetTable = existing?.table as "articles" | "popular_articles" || "articles";
 
     // Fetch the article content
     let articleText = "";
@@ -101,8 +104,8 @@ Respond ONLY with valid JSON: {"summary": "...", "keyTakeaways": ["...", "..."]}
         const summary = parsed.summary || "Summary unavailable.";
         const keyTakeaways = parsed.keyTakeaways || [];
 
-        // Save to database for future requests
-        await updateArticleSummary(url, summary, keyTakeaways);
+        // Save to database for future requests (correct table)
+        await updateArticleSummary(url, summary, keyTakeaways, targetTable);
 
         return NextResponse.json({ summary, keyTakeaways, aiGenerated: true });
       } catch (aiError) {
