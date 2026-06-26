@@ -5,6 +5,7 @@ import { fetchDevArticles } from "@/lib/sources/dev";
 import { fetchStackOverflow } from "@/lib/sources/stackoverflow";
 import { fetchInfoQ } from "@/lib/sources/infoq";
 import { rankArticles } from "@/lib/ranking";
+import { enrichWithWordCounts } from "@/lib/wordcount";
 
 export async function GET() {
   try {
@@ -19,8 +20,11 @@ export async function GET() {
 
     const allArticles = [...hn, ...github, ...dev, ...so, ...infoq];
 
-    // Rank all articles
-    const rankedArticles = rankArticles(allArticles);
+    // Enrich with real word counts from article content
+    const enriched = await enrichWithWordCounts(allArticles);
+
+    // Rank all articles using real data
+    const rankedArticles = rankArticles(enriched);
 
     return NextResponse.json({
       articles: rankedArticles,

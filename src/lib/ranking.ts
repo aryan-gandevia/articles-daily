@@ -1,43 +1,28 @@
 import { Article } from "./types";
 
 /**
- * Estimates word count from title and description length.
- * In a real app, we'd fetch the actual article content.
+ * Scores article length on 1-10 scale (10 = longest) using real word count.
+ * Linear scale: every ~500 words adds a point.
  */
-function estimateWordCount(article: Article): number {
-  // Use existing read time if available (DEV.to provides this)
-  if (article.estimatedReadTime) {
-    return article.estimatedReadTime * 200; // avg 200 wpm
-  }
-
-  // Heuristic based on source type
-  switch (article.source) {
-    case "hackernews":
-      return 1500; // HN links tend to be medium-length articles
-    case "github":
-      return 800; // README files are usually shorter
-    case "infoq":
-      return 2500; // InfoQ articles tend to be long-form
-    case "dev":
-      return 1200; // DEV articles vary but tend medium
-    case "stackoverflow":
-      return 600; // SO questions are usually shorter
-    default:
-      return 1000;
-  }
+function scoreLengthFromWordCount(wordCount: number): number {
+  if (wordCount < 200) return 1;
+  if (wordCount < 400) return 2;
+  if (wordCount < 700) return 3;
+  if (wordCount < 1000) return 4;
+  if (wordCount < 1400) return 5;
+  if (wordCount < 1900) return 6;
+  if (wordCount < 2500) return 7;
+  if (wordCount < 3200) return 8;
+  if (wordCount < 4200) return 9;
+  return 10;
 }
 
 /**
- * Scores article length on 1-10 scale (10 = longest)
+ * Calculates read time from word count.
+ * Uses 238 wpm (average adult reading speed for technical content).
  */
-function scoreLengthFromWordCount(wordCount: number): number {
-  // Scale: <300 = 1, 300-600 = 2-3, 600-1000 = 4-5, 1000-2000 = 6-7, 2000-3000 = 8-9, >3000 = 10
-  if (wordCount < 300) return 1;
-  if (wordCount < 600) return 3;
-  if (wordCount < 1000) return 5;
-  if (wordCount < 2000) return 7;
-  if (wordCount < 3000) return 9;
-  return 10;
+function calculateReadTime(wordCount: number): number {
+  return Math.max(1, Math.ceil(wordCount / 238));
 }
 
 /**
@@ -116,13 +101,15 @@ function scoreDifficulty(article: Article): number {
 
 export function rankArticles(articles: Article[]): Article[] {
   return articles.map((article) => {
-    const wordCount = estimateWordCount(article);
-    const readTime = Math.ceil(wordCount / 200);
+    // Use real word count if already enriched, otherwise estimate from DEV read time
+    const wordCount = article.wordCount
+      || (article.estimatedReadTime ? article.estimatedReadTime * 238 : 1000);
+    const readTime = calculateReadTime(wordCount);
 
     return {
       ...article,
       wordCount,
-      estimatedReadTime: article.estimatedReadTime || readTime,
+      estimatedReadTime: readTime,
       lengthScore: scoreLengthFromWordCount(wordCount),
       contentScore: scoreContent(article),
       difficultyScore: scoreDifficulty(article),
