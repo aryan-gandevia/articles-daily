@@ -161,7 +161,7 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
                     className="mt-0.5 rounded border-border accent-accent disabled:opacity-40"
                   />
                   <span>
-                    Send me the daily article digest via email
+                    Send me the daily article digest via email (feature coming soon!)
                     {subscriberCount?.full && (
                       <span className="block text-xs text-red-500 mt-1">
                         Subscriptions temporarily full ({subscriberCount.count}/{subscriberCount.max})
