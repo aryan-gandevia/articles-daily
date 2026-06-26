@@ -9,6 +9,7 @@ interface GitHubRepo {
   language: string | null;
   owner: { login: string };
   topics: string[];
+  created_at: string;
 }
 
 export async function fetchGitHubTrending(): Promise<Article[]> {
@@ -37,6 +38,7 @@ export async function fetchGitHubTrending(): Promise<Article[]> {
       source: "github" as const,
       author: repo.owner.login,
       score: repo.stargazers_count,
+      publishedAt: repo.created_at,
       description: repo.description || "No description",
       tags: [repo.language, ...repo.topics.slice(0, 3)].filter(Boolean) as string[],
     }));

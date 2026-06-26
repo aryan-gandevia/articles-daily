@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { format, isToday, parseISO } from "date-fns";
 import { Article } from "@/lib/types";
 
 const sourceColors: Record<string, string> = {
@@ -56,9 +57,19 @@ export function ArticleCard({ article, index, onClick }: ArticleCardProps) {
               {article.description}
             </p>
           )}
-          <div className="flex items-center gap-3 mt-3">
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
             {article.author && (
               <span className="text-xs text-muted">by {article.author}</span>
+            )}
+            {article.publishedAt && (
+              <>
+                <span className="text-muted/30">·</span>
+                <span className={`text-xs ${isToday(parseISO(article.publishedAt)) ? "text-accent font-medium" : "text-muted"}`}>
+                  {isToday(parseISO(article.publishedAt))
+                    ? "Today"
+                    : format(parseISO(article.publishedAt), "MMM d, yyyy")}
+                </span>
+              </>
             )}
             {article.tags && article.tags.length > 0 && (
               <div className="flex gap-1.5">

@@ -16,6 +16,7 @@ export default function Home() {
   const [fetchedAt, setFetchedAt] = useState<string>();
   const [activeSource, setActiveSource] = useState<Source | "all">("all");
   const [activeSort, setActiveSort] = useState<SortCategory>("content");
+  const [todayOnly, setTodayOnly] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
   useEffect(() => {
@@ -44,6 +45,15 @@ export default function Home() {
       filtered = filtered.filter((a) => a.source === activeSource);
     }
 
+    // Filter by published today
+    if (todayOnly) {
+      const today = new Date().toISOString().split("T")[0];
+      filtered = filtered.filter((a) => {
+        if (!a.publishedAt) return false;
+        return a.publishedAt.startsWith(today);
+      });
+    }
+
     // Sort by selected category (descending)
     return [...filtered].sort((a, b) => {
       switch (activeSort) {
@@ -57,7 +67,7 @@ export default function Home() {
           return 0;
       }
     });
-  }, [articles, activeSource, activeSort]);
+  }, [articles, activeSource, activeSort, todayOnly]);
 
   if (error) {
     return (
@@ -87,8 +97,10 @@ export default function Home() {
           <FilterBar
             activeSource={activeSource}
             activeSort={activeSort}
+            todayOnly={todayOnly}
             onSourceChange={setActiveSource}
             onSortChange={setActiveSort}
+            onTodayToggle={() => setTodayOnly((prev) => !prev)}
           />
 
           <div className="space-y-3">
