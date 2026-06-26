@@ -5,11 +5,11 @@ import { format, isToday, parseISO } from "date-fns";
 import { Article } from "@/lib/types";
 
 const sourceColors: Record<string, string> = {
-  hackernews: "bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-300",
-  github: "bg-gray-200 text-gray-800 dark:bg-gray-500/20 dark:text-gray-300",
-  dev: "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300",
-  infoq: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300",
-  stackoverflow: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
+  hackernews: "bg-orange-100 text-black dark:bg-orange-500/20 dark:text-white",
+  github: "bg-gray-200 text-black dark:bg-gray-500/20 dark:text-white",
+  dev: "bg-indigo-100 text-black dark:bg-indigo-500/20 dark:text-white",
+  infoq: "bg-emerald-100 text-black dark:bg-emerald-500/20 dark:text-white",
+  stackoverflow: "bg-amber-100 text-black dark:bg-amber-500/20 dark:text-white",
 };
 
 const sourceLabels: Record<string, string> = {
@@ -120,9 +120,9 @@ function ScorePill({ label, value }: { label: string; value?: number }) {
   if (!value) return null;
 
   const getColor = (v: number) => {
-    if (v <= 3) return "text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/20";
-    if (v <= 6) return "text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-500/20";
-    return "text-rose-700 bg-rose-100 dark:text-rose-300 dark:bg-rose-500/20";
+    if (v <= 3) return "text-black bg-emerald-100 dark:text-white dark:bg-emerald-500/20";
+    if (v <= 6) return "text-black bg-amber-100 dark:text-white dark:bg-amber-500/20";
+    return "text-black bg-rose-100 dark:text-white dark:bg-rose-500/20";
   };
 
   return (
