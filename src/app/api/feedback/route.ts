@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
     // Rate limiting
     const userId = await getUserId(request);
     const ipAddress = getClientIp(request);
+    console.log("[Feedback] Rate limit check:", { userId, ipAddress });
 
     const { data: existingLimit, error: limitError } = await supabase
       .from("feedback_rate_limits")
@@ -82,12 +83,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert rate limit
+    const upsertRow = {
+      user_id: userId || null,
+      ip_address: userId ? null : ipAddress,
+      last_sent_at: new Date().toISOString(),
+    };
+    console.log("[Feedback] Upserting rate limit:", upsertRow);
+
     const { error: upsertError } = await supabase.from("feedback_rate_limits").upsert(
-      {
-        user_id: userId || null,
-        ip_address: userId ? null : ipAddress,
-        last_sent_at: new Date().toISOString(),
-      },
+      upsertRow,
       { onConflict: userId ? "user_id" : "ip_address" }
     );
 
@@ -96,6 +100,8 @@ export async function POST(request: NextRequest) {
       await logAppEvent("error", "api-feedback", "Rate limit upsert failed", {
         error: upsertError.message,
       });
+    } else {
+      console.log("[Feedback] Rate limit upsert succeeded");
     }
 
     // Get user metadata if requested
