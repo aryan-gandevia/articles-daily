@@ -15,7 +15,8 @@ export async function fetchInfoQ(): Promise<Article[]> {
     const articles: Article[] = [];
     const items = text.split("<item>").slice(1); // Skip header
 
-    for (const item of items.slice(0, 10)) {
+    for (let i = 0; i < Math.min(items.length, 10); i++) {
+      const item = items[i];
       const title = extractXMLTag(item, "title");
       const link = extractXMLTag(item, "link");
       const description = extractXMLTag(item, "description");
@@ -24,7 +25,7 @@ export async function fetchInfoQ(): Promise<Article[]> {
 
       if (title && link) {
         articles.push({
-          id: `infoq-${Buffer.from(link).toString("base64").slice(0, 12)}`,
+          id: `infoq-${i}-${Buffer.from(link).toString("base64url").slice(-16)}`,
           title: cleanHtml(title),
           url: link,
           source: "infoq",
